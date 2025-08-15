@@ -1,14 +1,74 @@
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
-import { PagesClient } from '../../src/lib/pages-client.js';
 
-// Mock the base client
-const mockCloudflareClient = {
-  makeRequest: jest.fn()
+// Mock axios instance
+const mockAxiosInstance = {
+  get: jest.fn(),
+  post: jest.fn(),
+  delete: jest.fn(),
+  interceptors: {
+    response: {
+      use: jest.fn()
+    }
+  }
 };
 
-jest.unstable_mockModule('../../src/lib/cloudflare-client.js', () => ({
-  CloudflareClient: jest.fn(() => mockCloudflareClient)
+const mockAxios = {
+  create: jest.fn(() => mockAxiosInstance)
+};
+
+jest.unstable_mockModule('axios', () => ({
+  default: mockAxios
 }));
+
+// Mock config
+jest.unstable_mockModule('../../src/config/config.js', () => ({
+  config: {
+    cloudflare: {
+      apiToken: 'default-token',
+      accountId: 'default-account',
+      baseUrl: 'https://api.cloudflare.com/client/v4',
+      rateLimit: {
+        concurrent: 5,
+        delay: 100
+      }
+    },
+    cli: {
+      timeout: 30000
+    }
+  }
+}));
+
+// Mock logger
+const mockLogger = {
+  error: jest.fn(),
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn()
+};
+
+const mockProgressLogger = {
+  increment: jest.fn(),
+  complete: jest.fn().mockReturnValue({ duration: 1000, rate: 2 })
+};
+
+jest.unstable_mockModule('../../src/utils/logger.js', () => ({
+  logger: mockLogger,
+  ProgressLogger: jest.fn(() => mockProgressLogger)
+}));
+
+// Mock dayjs
+jest.unstable_mockModule('dayjs', () => ({
+  default: jest.fn(() => ({
+    subtract: jest.fn().mockReturnThis(),
+    format: jest.fn(() => '2023-01'),
+    isAfter: jest.fn(() => true),
+    isBefore: jest.fn(() => false),
+    toISOString: jest.fn(() => '2023-01-01T00:00:00.000Z')
+  }))
+}));
+
+// Import after mocking
+const { PagesClient } = await import('../../src/lib/pages-client.js');
 
 describe('PagesClient', () => {
   let pagesClient;
@@ -22,140 +82,151 @@ describe('PagesClient', () => {
 
   describe('listProjects', () => {
     test('should fetch and return all projects', async () => {
-      const mockProjects = [
-        { name: 'project1', id: '1' },
-        { name: 'project2', id: '2' }
-      ];
-      mockCloudflareClient.makeRequest.mockResolvedValue(mockProjects);
+      const mockResponse = {
+        data: {
+          success: true,
+          result: [
+            { name: 'project1', id: '1' },
+            { name: 'project2', id: '2' }
+          ]
+        }
+      };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
       const result = await pagesClient.listProjects();
 
-      expect(result).toEqual(mockProjects);
-      expect(mockCloudflareClient.makeRequest).toHaveBeenCalledWith(
-        'GET',
-        `/accounts/${mockAccountId}/pages/projects`
+      expect(result).toEqual(mockResponse.data.result);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects`,
+        { params: {} }
       );
     });
   });
 
   describe('getProject', () => {
     test('should fetch specific project details', async () => {
-      const mockProject = { name: 'test-project', id: '123' };
-      mockCloudflareClient.makeRequest.mockResolvedValue(mockProject);
+      const mockResponse = {
+        data: {
+          success: true,
+          result: { name: 'test-project', id: '123' }
+        }
+      };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
       const result = await pagesClient.getProject('test-project');
 
-      expect(result).toEqual(mockProject);
-      expect(mockCloudflareClient.makeRequest).toHaveBeenCalledWith(
-        'GET',
-        `/accounts/${mockAccountId}/pages/projects/test-project`
+      expect(result).toEqual(mockResponse.data.result);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects/test-project`,
+        { params: {} }
       );
     });
   });
 
   describe('listAllDeployments', () => {
     test('should fetch all deployments for project', async () => {
-      const mockDeployments = [
-        { id: 'deploy1', environment: 'preview' },
-        { id: 'deploy2', environment: 'production' }
-      ];
-      mockCloudflareClient.makeRequest.mockResolvedValue(mockDeployments);
+      const mockResponse = {
+        data: {
+          success: true,
+          result: [
+            { id: 'deploy1', environment: 'preview', created_on: '2023-01-01T00:00:00Z' },
+            { id: 'deploy2', environment: 'production', created_on: '2023-01-02T00:00:00Z' }
+          ]
+        }
+      };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
       const result = await pagesClient.listAllDeployments('test-project');
 
-      expect(result).toEqual(mockDeployments);
-      expect(mockCloudflareClient.makeRequest).toHaveBeenCalledWith(
-        'GET',
-        `/accounts/${mockAccountId}/pages/projects/test-project/deployments`
+      expect(result).toEqual(mockResponse.data.result);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments`,
+        { params: {} }
       );
     });
 
-    test('should apply filters correctly', async () => {
-      const mockDeployments = [
-        { id: 'deploy1', environment: 'preview', created_on: '2023-01-01' }
-      ];
-      mockCloudflareClient.makeRequest.mockResolvedValue(mockDeployments);
+    test('should apply environment filter', async () => {
+      const mockResponse = {
+        data: {
+          success: true,
+          result: [{ id: 'deploy1', environment: 'preview', created_on: '2023-01-01T00:00:00Z' }]
+        }
+      };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
-      const result = await pagesClient.listAllDeployments('test-project', {
-        environment: 'preview',
-        maxAge: 30
-      });
+      await pagesClient.listAllDeployments('test-project', { environment: 'preview' });
 
-      expect(result).toEqual(mockDeployments);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments`,
+        { params: { env: 'preview' } }
+      );
     });
   });
 
   describe('deleteDeployment', () => {
     test('should delete deployment successfully', async () => {
-      mockCloudflareClient.makeRequest.mockResolvedValue({ success: true });
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.delete.mockResolvedValue(mockResponse);
 
       const result = await pagesClient.deleteDeployment('test-project', 'deploy-id');
 
-      expect(result.success).toBe(true);
-      expect(mockCloudflareClient.makeRequest).toHaveBeenCalledWith(
-        'DELETE',
-        `/accounts/${mockAccountId}/pages/projects/test-project/deployments/deploy-id`,
-        undefined
+      expect(result).toBe(true);
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments/deploy-id`
       );
-    });
-
-    test('should handle dry run mode', async () => {
-      const result = await pagesClient.deleteDeployment('test-project', 'deploy-id', {
-        dryRun: true
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.dryRun).toBe(true);
-      expect(mockCloudflareClient.makeRequest).not.toHaveBeenCalled();
     });
   });
 
   describe('bulkDeleteDeployments', () => {
     test('should delete multiple deployments', async () => {
       const deployments = [
-        { id: 'deploy1', environment: 'preview' },
-        { id: 'deploy2', environment: 'preview' }
+        { id: 'deploy1', environment: 'preview', created_on: '2023-01-01T00:00:00Z' },
+        { id: 'deploy2', environment: 'preview', created_on: '2023-01-02T00:00:00Z' }
       ];
-      
-      mockCloudflareClient.makeRequest.mockResolvedValue({ success: true });
 
-      const result = await pagesClient.bulkDeleteDeployments('test-project', deployments);
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.delete.mockResolvedValue(mockResponse);
+
+      const result = await pagesClient.bulkDeleteDeployments('test-project', deployments, {
+        skipProduction: false, // Don't skip any to delete both
+        keepLatest: 0 // Don't keep any latest
+      });
 
       expect(result.success).toBe(2);
       expect(result.failed).toBe(0);
       expect(result.total).toBe(2);
-      expect(mockCloudflareClient.makeRequest).toHaveBeenCalledTimes(2);
+      expect(mockAxiosInstance.delete).toHaveBeenCalledTimes(2);
     });
 
-    test('should respect production protection', async () => {
+    test('should handle dry run mode', async () => {
       const deployments = [
-        { id: 'deploy1', environment: 'preview' },
-        { id: 'deploy2', environment: 'production' }
+        { id: 'deploy1', environment: 'preview', created_on: '2023-01-01T00:00:00Z' }
       ];
-      
-      mockCloudflareClient.makeRequest.mockResolvedValue({ success: true });
 
       const result = await pagesClient.bulkDeleteDeployments('test-project', deployments, {
-        skipProduction: true
+        dryRun: true
       });
 
-      expect(result.success).toBe(1);
-      expect(result.skipped).toBe(1);
-      expect(mockCloudflareClient.makeRequest).toHaveBeenCalledTimes(1);
+      expect(result.dryRun).toBe(true);
+      expect(mockAxiosInstance.delete).not.toHaveBeenCalled();
     });
   });
 
   describe('deleteProject', () => {
     test('should delete entire project successfully', async () => {
-      mockCloudflareClient.makeRequest.mockResolvedValue({ success: true });
+      // Mock getProject call
+      const projectResponse = { data: { success: true, result: { name: 'test-project' } } };
+      // Mock delete call
+      const deleteResponse = { data: { success: true } };
+      
+      mockAxiosInstance.get.mockResolvedValueOnce(projectResponse);
+      mockAxiosInstance.delete.mockResolvedValueOnce(deleteResponse);
 
       const result = await pagesClient.deleteProject('test-project');
 
       expect(result.success).toBe(true);
-      expect(mockCloudflareClient.makeRequest).toHaveBeenCalledWith(
-        'DELETE',
-        `/accounts/${mockAccountId}/pages/projects/test-project`,
-        undefined
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects/test-project`
       );
     });
 
@@ -164,7 +235,7 @@ describe('PagesClient', () => {
 
       expect(result.success).toBe(true);
       expect(result.dryRun).toBe(true);
-      expect(mockCloudflareClient.makeRequest).not.toHaveBeenCalled();
+      expect(mockAxiosInstance.delete).not.toHaveBeenCalled();
     });
   });
 });

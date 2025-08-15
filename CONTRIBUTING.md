@@ -29,6 +29,7 @@ Before contributing, ensure you have:
 ### Development Environment
 
 We recommend using:
+
 - **VS Code** with recommended extensions (see `.vscode/extensions.json`)
 - **ESLint** and **Prettier** for code formatting
 - **Jest** for testing (configured for ESM modules)
@@ -36,23 +37,27 @@ We recommend using:
 ## Development Setup
 
 1. **Fork the repository**
+
    ```bash
    git clone https://github.com/your-username/cloudflare-bulk-delete.git
    cd cloudflare-bulk-delete
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Copy environment configuration**
+
    ```bash
    cp examples/configuration/.env.example .env
    # Edit .env with your Cloudflare credentials (for testing)
    ```
 
 4. **Run tests to verify setup**
+
    ```bash
    npm test
    npm run test:coverage
@@ -70,7 +75,7 @@ We recommend using:
 # Development and Testing
 npm run dev                 # Run in development mode
 npm run test               # Run all tests
-npm run test:watch         # Run tests in watch mode  
+npm run test:watch         # Run tests in watch mode
 npm run test:coverage      # Run tests with coverage report
 npm run test:ci            # Run tests for CI (no watch, coverage)
 
@@ -79,7 +84,7 @@ npm run lint               # Run ESLint
 npm run lint:fix           # Fix ESLint issues automatically
 npm run format             # Format code with Prettier
 
-# Build and Release  
+# Build and Release
 npm run build              # Build the project
 npm run prepublish         # Prepare for npm publish
 
@@ -110,7 +115,7 @@ cloudflare-bulk-delete/
 │   └── fixtures/        # Test data and mocks
 ├── examples/            # Usage examples
 │   ├── basic/          # Simple examples
-│   ├── advanced/       # Complex scenarios  
+│   ├── advanced/       # Complex scenarios
 │   ├── programmatic/   # Library usage examples
 │   └── configuration/ # Config templates
 ├── docs/               # Additional documentation
@@ -138,7 +143,7 @@ async function validateCloudflareConnection(apiToken, accountId) {
 
 // ❌ Bad - Unclear names
 async function validate(token, id) {
-  // Implementation  
+  // Implementation
 }
 
 // ✅ Good - Proper error handling
@@ -167,7 +172,7 @@ async function bulkDeleteDeployments(projectName, deployments, options = {}) {
 ### Code Style Guidelines
 
 - **ES6+ Features**: Use modern JavaScript features (async/await, destructuring, etc.)
-- **Modular Design**: Keep functions small and focused on single responsibilities  
+- **Modular Design**: Keep functions small and focused on single responsibilities
 - **Error Handling**: Always handle errors gracefully with meaningful messages
 - **Logging**: Use structured logging with appropriate levels (debug, info, warn, error)
 - **Documentation**: Document public APIs with JSDoc, add inline comments for complex logic
@@ -197,7 +202,7 @@ We use Jest with ESM support for all testing:
 describe('ServiceManager', () => {
   describe('bulkDeleteDeployments', () => {
     let serviceManager;
-    
+
     beforeEach(() => {
       serviceManager = new ServiceManager('test-token', 'test-account');
     });
@@ -206,14 +211,15 @@ describe('ServiceManager', () => {
       // Arrange
       const deployments = [{ id: 'deploy1' }, { id: 'deploy2' }];
       const mockApiResponse = { success: true };
-      
-      // Mock API calls
-      jest.spyOn(serviceManager.pagesClient, 'deleteDeployment')
-          .mockResolvedValue(mockApiResponse);
 
-      // Act  
+      // Mock API calls
+      jest.spyOn(serviceManager.pagesClient, 'deleteDeployment').mockResolvedValue(mockApiResponse);
+
+      // Act
       const result = await serviceManager.bulkDeleteDeployments(
-        'pages', 'test-project', deployments
+        'pages',
+        'test-project',
+        deployments
       );
 
       // Assert
@@ -231,7 +237,7 @@ describe('ServiceManager', () => {
 ### Testing Requirements
 
 - **Unit Tests**: Cover all public methods and edge cases
-- **Integration Tests**: Test complete workflows with mocked external APIs  
+- **Integration Tests**: Test complete workflows with mocked external APIs
 - **Error Testing**: Verify error handling and recovery mechanisms
 - **Mock External Dependencies**: Never make real API calls in tests
 - **Test Coverage**: Maintain minimum 75% code coverage (target: 85%+)
@@ -275,11 +281,12 @@ npm run test:coverage -- --coverage --coverageReporters=html
 
 1. **Create an Issue**: For new features or significant changes, create an issue first to discuss the approach
 
-2. **Branch Strategy**: 
+2. **Branch Strategy**:
+
    ```bash
    # Create feature branch from main
    git checkout -b feature/your-feature-name
-   
+
    # Or for bug fixes
    git checkout -b fix/issue-description
    ```
@@ -296,23 +303,27 @@ npm run test:coverage -- --coverage --coverageReporters=html
 When submitting a PR, include:
 
 **Description**
+
 - Clear summary of changes
 - Reference related issues (`Fixes #123`)
 - Screenshots for UI changes
 
 **Type of Change**
+
 - [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)  
+- [ ] New feature (non-breaking change that adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] Documentation update
 
-**Testing**  
+**Testing**
+
 - [ ] Unit tests pass
 - [ ] Integration tests pass
 - [ ] Test coverage maintained/improved
 - [ ] Manual testing completed
 
 **Checklist**
+
 - [ ] Code follows project coding standards
 - [ ] Self-review completed
 - [ ] Comments added for complex logic
@@ -323,7 +334,7 @@ When submitting a PR, include:
 
 1. **Automated Checks**: All PRs must pass CI/CD checks
 2. **Code Review**: At least one maintainer review required
-3. **Testing**: Verify tests pass and coverage is maintained  
+3. **Testing**: Verify tests pass and coverage is maintained
 4. **Documentation**: Ensure changes are properly documented
 
 ### Merging
@@ -340,26 +351,32 @@ When reporting bugs, include:
 
 ```markdown
 ## Bug Description
+
 Clear description of the issue
 
 ## Steps to Reproduce
+
 1. Step one
-2. Step two  
+2. Step two
 3. Step three
 
 ## Expected Behavior
+
 What should have happened
 
-## Actual Behavior  
+## Actual Behavior
+
 What actually happened
 
 ## Environment
-- Node.js version: 
+
+- Node.js version:
 - npm version:
 - OS:
 - Tool version:
 
 ## Additional Context
+
 - Log output
 - Configuration details
 - Screenshots (if applicable)
@@ -371,18 +388,23 @@ For new features:
 
 ```markdown
 ## Feature Description
+
 Clear description of the requested feature
 
 ## Use Case
+
 Why is this feature needed? What problem does it solve?
 
 ## Proposed Solution
+
 How should this feature work?
 
 ## Alternatives Considered
+
 Any alternative approaches considered?
 
 ## Additional Context
+
 Any other relevant information
 ```
 
@@ -391,6 +413,7 @@ Any other relevant information
 ### README Updates
 
 Keep the main README.md current with:
+
 - Installation instructions
 - Basic usage examples
 - Configuration options
@@ -422,6 +445,7 @@ We follow [Semantic Versioning](https://semver.org/):
 ### Release Steps
 
 1. **Version Bump**:
+
    ```bash
    npm version patch|minor|major
    ```
@@ -432,6 +456,7 @@ We follow [Semantic Versioning](https://semver.org/):
    - Review and update examples
 
 3. **Testing**:
+
    ```bash
    npm run test:ci
    npm run build
@@ -446,8 +471,9 @@ We follow [Semantic Versioning](https://semver.org/):
 ### Changelog Maintenance
 
 Keep CHANGELOG.md updated with:
+
 - **Added**: New features
-- **Changed**: Changes in existing functionality  
+- **Changed**: Changes in existing functionality
 - **Deprecated**: Soon-to-be removed features
 - **Removed**: Removed features
 - **Fixed**: Bug fixes
@@ -465,13 +491,14 @@ Keep CHANGELOG.md updated with:
 ### Communication
 
 - **Issues**: For bug reports and feature requests
-- **Discussions**: For questions and community conversations  
+- **Discussions**: For questions and community conversations
 - **Pull Requests**: For code contributions
 - **Email**: For security issues or sensitive topics
 
 ### Recognition
 
 Contributors will be recognized in:
+
 - README.md contributors section
 - Release notes for significant contributions
 - GitHub contributor statistics
@@ -488,6 +515,7 @@ If you need help:
 ### Maintainer Contact
 
 For urgent issues or maintainer-specific questions:
+
 - Create a GitHub issue with `@maintainer` mention
 - Email: [maintainer-email] for security issues
 
@@ -500,7 +528,7 @@ For urgent issues or maintainer-specific questions:
 git clone https://github.com/your-username/cloudflare-bulk-delete.git
 cd cloudflare-bulk-delete
 
-# 2. Setup development environment  
+# 2. Setup development environment
 npm install
 cp examples/configuration/.env.example .env
 
@@ -512,7 +540,7 @@ git checkout -b feature/your-feature
 
 # 5. Make changes and test
 npm run lint
-npm run test:coverage  
+npm run test:coverage
 
 # 6. Commit and push
 git add .

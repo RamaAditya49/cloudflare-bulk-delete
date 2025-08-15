@@ -1,6 +1,6 @@
 /**
  * Monitoring and Observability Cleanup Example
- * 
+ *
  * This example demonstrates comprehensive monitoring and observability:
  * 1. Real-time metrics collection and reporting
  * 2. Integration with monitoring systems (Prometheus, Grafana, DataDog)
@@ -22,7 +22,7 @@ import { performance } from 'perf_hooks';
 export class CloudflareCleanupMonitor extends EventEmitter {
   constructor(options = {}) {
     super();
-    
+
     this.options = {
       metricsInterval: options.metricsInterval || 30000, // 30 seconds
       healthCheckInterval: options.healthCheckInterval || 60000, // 1 minute
@@ -47,7 +47,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
       uptime: 0,
       memoryUsage: { heapUsed: 0, heapTotal: 0, external: 0 },
       cpuUsage: { user: 0, system: 0 },
-      
+
       // Operation metrics
       totalOperations: 0,
       successfulOperations: 0,
@@ -61,19 +61,19 @@ export class CloudflareCleanupMonitor extends EventEmitter {
         averageResponseTime: 0,
         responseTimeHistory: []
       },
-      
+
       // Cleanup metrics
       itemsProcessed: 0,
       itemsDeleted: 0,
       itemsFailed: 0,
       projectsProcessed: 0,
       batchesProcessed: 0,
-      
+
       // Error tracking
       errors: [],
       errorsByType: new Map(),
       errorsByProject: new Map(),
-      
+
       // Performance metrics
       throughput: 0,
       efficiency: 0,
@@ -84,7 +84,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
       errorRateAlert: false,
       responseTimeAlert: false,
       memoryAlert: false,
-      rateLimit Alert: false
+      rateLimitAlert: false
     };
 
     this.traces = new Map(); // For distributed tracing
@@ -127,7 +127,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
   collectSystemMetrics() {
     // Update uptime
     this.metrics.uptime = Date.now() - this.metrics.startTime;
-    
+
     // Memory usage
     const memUsage = process.memoryUsage();
     this.metrics.memoryUsage = {
@@ -136,7 +136,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
       external: memUsage.external,
       rss: memUsage.rss
     };
-    
+
     // CPU usage (simplified)
     const cpuUsage = process.cpuUsage();
     this.metrics.cpuUsage = {
@@ -151,21 +151,21 @@ export class CloudflareCleanupMonitor extends EventEmitter {
   calculatePerformanceMetrics() {
     // Calculate throughput (items per second)
     if (this.metrics.uptime > 0) {
-      this.metrics.throughput = (this.metrics.itemsProcessed / (this.metrics.uptime / 1000));
+      this.metrics.throughput = this.metrics.itemsProcessed / (this.metrics.uptime / 1000);
     }
-    
+
     // Calculate efficiency (success rate)
     if (this.metrics.totalOperations > 0) {
       this.metrics.efficiency = this.metrics.successfulOperations / this.metrics.totalOperations;
     }
-    
+
     // Calculate average API response time
     if (this.metrics.apiCalls.responseTimeHistory.length > 0) {
       const recent = this.metrics.apiCalls.responseTimeHistory.slice(-100); // Last 100 calls
-      this.metrics.apiCalls.averageResponseTime = 
+      this.metrics.apiCalls.averageResponseTime =
         recent.reduce((sum, time) => sum + time, 0) / recent.length;
     }
-    
+
     // Calculate resource utilization
     this.metrics.resourceUtilization = Math.min(
       this.metrics.memoryUsage.heapUsed / this.metrics.memoryUsage.heapTotal,
@@ -178,11 +178,13 @@ export class CloudflareCleanupMonitor extends EventEmitter {
    */
   checkAlertConditions() {
     const thresholds = this.options.alertThresholds;
-    
+
     // Error rate alert
-    const errorRate = this.metrics.totalOperations > 0 ? 
-      this.metrics.failedOperations / this.metrics.totalOperations : 0;
-    
+    const errorRate =
+      this.metrics.totalOperations > 0
+        ? this.metrics.failedOperations / this.metrics.totalOperations
+        : 0;
+
     if (errorRate > thresholds.errorRate && !this.alertState.errorRateAlert) {
       this.alertState.errorRateAlert = true;
       this.triggerAlert('error_rate_high', {
@@ -194,10 +196,12 @@ export class CloudflareCleanupMonitor extends EventEmitter {
     } else if (errorRate <= thresholds.errorRate * 0.8) {
       this.alertState.errorRateAlert = false;
     }
-    
+
     // Response time alert
-    if (this.metrics.apiCalls.averageResponseTime > thresholds.avgResponseTime && 
-        !this.alertState.responseTimeAlert) {
+    if (
+      this.metrics.apiCalls.averageResponseTime > thresholds.avgResponseTime &&
+      !this.alertState.responseTimeAlert
+    ) {
       this.alertState.responseTimeAlert = true;
       this.triggerAlert('response_time_high', {
         currentTime: this.metrics.apiCalls.averageResponseTime,
@@ -206,10 +210,12 @@ export class CloudflareCleanupMonitor extends EventEmitter {
     } else if (this.metrics.apiCalls.averageResponseTime <= thresholds.avgResponseTime * 0.8) {
       this.alertState.responseTimeAlert = false;
     }
-    
+
     // Memory usage alert
-    if (this.metrics.memoryUsage.heapUsed > thresholds.memoryUsage && 
-        !this.alertState.memoryAlert) {
+    if (
+      this.metrics.memoryUsage.heapUsed > thresholds.memoryUsage &&
+      !this.alertState.memoryAlert
+    ) {
       this.alertState.memoryAlert = true;
       this.triggerAlert('memory_usage_high', {
         currentUsage: this.metrics.memoryUsage.heapUsed,
@@ -234,12 +240,12 @@ export class CloudflareCleanupMonitor extends EventEmitter {
     };
 
     this.emit('alert', alert);
-    
+
     // Send to integrations
     if (this.options.integrations.webhook) {
       await this.sendWebhookAlert(alert);
     }
-    
+
     // Log alert
     logger.warn(`Alert triggered: ${type}`, alert);
   }
@@ -318,8 +324,10 @@ export class CloudflareCleanupMonitor extends EventEmitter {
       metrics: {
         memoryUsageMB: Math.round(this.metrics.memoryUsage.heapUsed / 1024 / 1024),
         throughput: this.metrics.throughput,
-        errorRate: this.metrics.totalOperations > 0 ? 
-          this.metrics.failedOperations / this.metrics.totalOperations : 0,
+        errorRate:
+          this.metrics.totalOperations > 0
+            ? this.metrics.failedOperations / this.metrics.totalOperations
+            : 0,
         avgResponseTime: this.metrics.apiCalls.averageResponseTime
       }
     };
@@ -361,15 +369,15 @@ export class CloudflareCleanupMonitor extends EventEmitter {
       spans: [],
       status: 'started'
     };
-    
+
     this.traces.set(operationId, trace);
-    
+
     this.emit('trace-started', {
       operationId,
       type,
       timestamp: trace.startTimestamp
     });
-    
+
     return trace;
   }
 
@@ -418,7 +426,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
     // Update metrics
     this.metrics.totalOperations++;
     this.metrics.operationDurations.push(trace.duration);
-    
+
     if (result.success) {
       this.metrics.successfulOperations++;
     } else {
@@ -451,10 +459,10 @@ export class CloudflareCleanupMonitor extends EventEmitter {
   recordApiCall(duration, success = true, rateLimited = false) {
     this.metrics.apiCalls.total++;
     this.metrics.apiCalls.responseTimeHistory.push(duration);
-    
+
     // Keep only recent response times
     if (this.metrics.apiCalls.responseTimeHistory.length > 1000) {
-      this.metrics.apiCalls.responseTimeHistory = 
+      this.metrics.apiCalls.responseTimeHistory =
         this.metrics.apiCalls.responseTimeHistory.slice(-500);
     }
 
@@ -487,7 +495,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
     };
 
     this.metrics.errors.push(errorRecord);
-    
+
     // Categorize errors
     const errorType = errorRecord.type;
     const currentCount = this.metrics.errorsByType.get(errorType) || 0;
@@ -561,7 +569,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
     try {
       const metricsSnapshot = this.emitMetrics();
       const logLine = JSON.stringify(metricsSnapshot) + '\n';
-      
+
       await fs.appendFile(this.options.integrations.logFile, logLine);
     } catch (error) {
       logger.warn('Failed to write metrics to log file', { error: error.message });
@@ -574,7 +582,7 @@ export class CloudflareCleanupMonitor extends EventEmitter {
   getMetricsReport() {
     const now = Date.now();
     const uptimeMinutes = Math.round(this.metrics.uptime / 60000);
-    
+
     return {
       summary: {
         uptime: `${Math.floor(uptimeMinutes / 60)}h ${uptimeMinutes % 60}m`,
@@ -611,9 +619,11 @@ export class CloudflareCleanupMonitor extends EventEmitter {
       },
       traces: {
         active: this.traces.size,
-        avgDuration: this.metrics.operationDurations.length > 0 ?
-          this.metrics.operationDurations.reduce((sum, d) => sum + d, 0) / 
-          this.metrics.operationDurations.length : 0
+        avgDuration:
+          this.metrics.operationDurations.length > 0
+            ? this.metrics.operationDurations.reduce((sum, d) => sum + d, 0) /
+              this.metrics.operationDurations.length
+            : 0
       }
     };
   }
@@ -625,11 +635,11 @@ export class CloudflareCleanupMonitor extends EventEmitter {
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval);
     }
-    
+
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
-    
+
     this.traces.clear();
     this.removeAllListeners();
   }
@@ -649,31 +659,39 @@ export async function monitoredCleanupExample() {
   });
 
   // Setup comprehensive event monitoring
-  monitor.on('metrics', (metrics) => {
+  monitor.on('metrics', metrics => {
     console.log(`📊 Metrics Update:`);
-    console.log(`   Operations: ${metrics.operations.total} (${Math.round(metrics.operations.efficiency * 100)}% success)`);
-    console.log(`   Throughput: ${Math.round(metrics.operations.throughput * 100) / 100} items/sec`);
+    console.log(
+      `   Operations: ${metrics.operations.total} (${Math.round(metrics.operations.efficiency * 100)}% success)`
+    );
+    console.log(
+      `   Throughput: ${Math.round(metrics.operations.throughput * 100) / 100} items/sec`
+    );
     console.log(`   Memory: ${Math.round(metrics.system.memoryUsage.heapUsed / 1024 / 1024)}MB`);
     console.log(`   API Avg Response: ${Math.round(metrics.api.averageResponseTime)}ms`);
   });
 
-  monitor.on('alert', (alert) => {
+  monitor.on('alert', alert => {
     console.log(`🚨 ALERT [${alert.severity.toUpperCase()}]: ${alert.type}`);
     console.log(`   ${JSON.stringify(alert.data, null, 2)}`);
   });
 
-  monitor.on('health-check', (health) => {
+  monitor.on('health-check', health => {
     console.log(`💗 Health Check: ${health.status}`);
     if (health.status !== 'healthy') {
-      console.log(`   Issues: ${Object.entries(health.checks)
-        .filter(([_, status]) => status !== 'pass')
-        .map(([check, status]) => `${check}: ${status}`)
-        .join(', ')}`);
+      console.log(
+        `   Issues: ${Object.entries(health.checks)
+          .filter(([_, status]) => status !== 'pass')
+          .map(([check, status]) => `${check}: ${status}`)
+          .join(', ')}`
+      );
     }
   });
 
-  monitor.on('trace-completed', (trace) => {
-    console.log(`🔍 Trace: ${trace.operationId} (${trace.type}) completed in ${Math.round(trace.duration)}ms`);
+  monitor.on('trace-completed', trace => {
+    console.log(
+      `🔍 Trace: ${trace.operationId} (${trace.type}) completed in ${Math.round(trace.duration)}ms`
+    );
   });
 
   try {
@@ -693,10 +711,10 @@ export async function monitoredCleanupExample() {
     // Connection validation with monitoring
     const validateSpan = monitor.addSpan('main-cleanup', 'validate-connection');
     const startTime = performance.now();
-    
+
     const connectionStatus = await serviceManager.validateConnections();
     const apiCallDuration = performance.now() - startTime;
-    
+
     monitor.recordApiCall(apiCallDuration, connectionStatus.overall);
     monitor.finishSpan('main-cleanup', validateSpan, { success: connectionStatus.overall });
 
@@ -707,18 +725,20 @@ export async function monitoredCleanupExample() {
     // Get resources with monitoring
     const resourceSpan = monitor.addSpan('main-cleanup', 'fetch-resources');
     const resourceStartTime = performance.now();
-    
+
     const resources = await serviceManager.listAllResources();
     const resourceDuration = performance.now() - resourceStartTime;
-    
+
     monitor.recordApiCall(resourceDuration, true);
-    monitor.finishSpan('main-cleanup', resourceSpan, { 
-      success: true, 
+    monitor.finishSpan('main-cleanup', resourceSpan, {
+      success: true,
       pagesCount: resources.pages.length,
-      workersCount: resources.workers.length 
+      workersCount: resources.workers.length
     });
 
-    console.log(`📋 Found ${resources.pages.length} Pages projects, ${resources.workers.length} Workers scripts\n`);
+    console.log(
+      `📋 Found ${resources.pages.length} Pages projects, ${resources.workers.length} Workers scripts\n`
+    );
 
     // Process each project with detailed monitoring
     for (const [index, project] of resources.pages.entries()) {
@@ -734,10 +754,10 @@ export async function monitoredCleanupExample() {
         // Get deployments
         const deploymentsSpan = monitor.addSpan(`project-${project.name}`, 'fetch-deployments');
         const deployStartTime = performance.now();
-        
+
         const deployments = await serviceManager.listDeployments('pages', project.name);
         const deployDuration = performance.now() - deployStartTime;
-        
+
         monitor.recordApiCall(deployDuration, true);
         monitor.finishSpan(`project-${project.name}`, deploymentsSpan, {
           success: true,
@@ -746,7 +766,9 @@ export async function monitoredCleanupExample() {
 
         // Filter old deployments
         const oldDeployments = deployments.filter(deployment => {
-          const age = Math.floor((Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24));
+          const age = Math.floor(
+            (Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24)
+          );
           return deployment.environment === 'preview' && age > 14;
         });
 
@@ -761,7 +783,7 @@ export async function monitoredCleanupExample() {
         // Perform cleanup with monitoring
         const cleanupSpan = monitor.addSpan(`project-${project.name}`, 'cleanup-deployments');
         const cleanupStartTime = performance.now();
-        
+
         const result = await serviceManager.bulkDeleteDeployments(
           'pages',
           project.name,
@@ -772,7 +794,7 @@ export async function monitoredCleanupExample() {
             skipProduction: true
           }
         );
-        
+
         const cleanupDuration = performance.now() - cleanupStartTime;
         monitor.recordApiCall(cleanupDuration, result.success > 0 || result.failed === 0);
         monitor.finishSpan(`project-${project.name}`, cleanupSpan, {
@@ -796,7 +818,6 @@ export async function monitoredCleanupExample() {
           cleaned: result.success,
           failed: result.failed
         });
-
       } catch (error) {
         console.error(`   ❌ Project failed: ${error.message}`);
         monitor.recordError(error, `project-${project.name}`, 'project-cleanup');
@@ -819,7 +840,6 @@ export async function monitoredCleanupExample() {
     console.log('\n📊 Final Monitoring Report:');
     const report = monitor.getMetricsReport();
     console.log(JSON.stringify(report, null, 2));
-
   } catch (error) {
     console.error('❌ Monitored cleanup failed:', error.message);
     monitor.recordError(error, 'main-cleanup', 'cleanup-operation');

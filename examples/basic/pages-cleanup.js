@@ -2,7 +2,7 @@
 
 /**
  * Basic Pages Deployment Cleanup Example
- * 
+ *
  * This example demonstrates how to:
  * 1. Connect to Cloudflare API
  * 2. List Pages projects and deployments
@@ -17,11 +17,7 @@ import { logger } from '../../src/utils/logger.js';
 // Load environment variables
 dotenv.config();
 
-const { 
-  CLOUDFLARE_API_TOKEN, 
-  CLOUDFLARE_ACCOUNT_ID,
-  DEFAULT_DRY_RUN = 'true'
-} = process.env;
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, DEFAULT_DRY_RUN = 'true' } = process.env;
 
 async function basicPagesCleanup() {
   try {
@@ -29,26 +25,30 @@ async function basicPagesCleanup() {
 
     // Validate required environment variables
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
-      throw new Error('Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID');
+      throw new Error(
+        'Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID'
+      );
     }
 
     // Initialize service manager
     const serviceManager = new ServiceManager(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID);
-    
+
     // Validate connection
     console.log('🔍 Validating Cloudflare API connection...');
     const connectionStatus = await serviceManager.validateConnections();
-    
+
     if (!connectionStatus.overall) {
-      throw new Error(`Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`);
+      throw new Error(
+        `Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`
+      );
     }
-    
+
     console.log('✅ API connection validated successfully\n');
 
     // List all Pages projects
     console.log('📋 Fetching Pages projects...');
     const resources = await serviceManager.listAllResources();
-    
+
     if (resources.pages.length === 0) {
       console.log('ℹ️  No Pages projects found in this account');
       return;
@@ -63,11 +63,11 @@ async function basicPagesCleanup() {
     // Process each Pages project
     for (const project of resources.pages) {
       console.log(`🔄 Processing project: ${project.name}`);
-      
+
       try {
         // Get all deployments for this project
         const deployments = await serviceManager.listDeployments('pages', project.name);
-        
+
         if (deployments.length === 0) {
           console.log(`   ℹ️  No deployments found for ${project.name}`);
           continue;
@@ -77,14 +77,11 @@ async function basicPagesCleanup() {
 
         // Filter to get only preview deployments older than 7 days
         const now = new Date();
-        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-        
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
         const oldPreviewDeployments = deployments.filter(deployment => {
           const deploymentDate = new Date(deployment.created_on);
-          return (
-            deployment.environment === 'preview' &&
-            deploymentDate < sevenDaysAgo
-          );
+          return deployment.environment === 'preview' && deploymentDate < sevenDaysAgo;
         });
 
         if (oldPreviewDeployments.length === 0) {
@@ -92,8 +89,10 @@ async function basicPagesCleanup() {
           continue;
         }
 
-        console.log(`   🧹 Found ${oldPreviewDeployments.length} old preview deployment(s) to clean up`);
-        
+        console.log(
+          `   🧹 Found ${oldPreviewDeployments.length} old preview deployment(s) to clean up`
+        );
+
         // Show what will be deleted
         oldPreviewDeployments.forEach((deployment, index) => {
           const age = Math.floor((now - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24));
@@ -103,7 +102,7 @@ async function basicPagesCleanup() {
         // Perform cleanup with safety options
         const dryRun = DEFAULT_DRY_RUN === 'true';
         console.log(`   ${dryRun ? '🔍 [DRY RUN]' : '🗑️  [ACTUAL]'} Cleaning up deployments...`);
-        
+
         const result = await serviceManager.bulkDeleteDeployments(
           'pages',
           project.name,
@@ -116,26 +115,28 @@ async function basicPagesCleanup() {
           }
         );
 
-        console.log(`   ✅ Cleanup completed: ${result.success} succeeded, ${result.failed} failed`);
-        
+        console.log(
+          `   ✅ Cleanup completed: ${result.success} succeeded, ${result.failed} failed`
+        );
+
         if (result.failed > 0) {
           console.log(`   ⚠️  Some deletions failed. Check logs for details.`);
         }
-
       } catch (projectError) {
         console.error(`   ❌ Error processing ${project.name}:`, projectError.message);
         continue;
       }
-      
+
       console.log(); // Add spacing between projects
     }
 
     console.log('🎉 Basic Pages cleanup completed successfully!');
-    
-    if (DEFAULT_DRY_RUN === 'true') {
-      console.log('\n💡 Tip: Set DEFAULT_DRY_RUN=false in your .env file to perform actual cleanup');
-    }
 
+    if (DEFAULT_DRY_RUN === 'true') {
+      console.log(
+        '\n💡 Tip: Set DEFAULT_DRY_RUN=false in your .env file to perform actual cleanup'
+      );
+    }
   } catch (error) {
     console.error('❌ Cleanup failed:', error.message);
     logger.error('Basic Pages cleanup failed', { error: error.message, stack: error.stack });
@@ -145,11 +146,10 @@ async function basicPagesCleanup() {
 
 // Execute the cleanup if this script is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  basicPagesCleanup()
-    .catch(error => {
-      console.error('❌ Unhandled error:', error);
-      process.exit(1);
-    });
+  basicPagesCleanup().catch(error => {
+    console.error('❌ Unhandled error:', error);
+    process.exit(1);
+  });
 }
 
 export { basicPagesCleanup };

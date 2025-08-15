@@ -2,7 +2,7 @@
 
 /**
  * Basic Workers Script Cleanup Example
- * 
+ *
  * This example demonstrates how to:
  * 1. Connect to Cloudflare API
  * 2. List Workers scripts and their details
@@ -17,11 +17,7 @@ import { logger } from '../../src/utils/logger.js';
 // Load environment variables
 dotenv.config();
 
-const { 
-  CLOUDFLARE_API_TOKEN, 
-  CLOUDFLARE_ACCOUNT_ID,
-  DEFAULT_DRY_RUN = 'true'
-} = process.env;
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, DEFAULT_DRY_RUN = 'true' } = process.env;
 
 async function basicWorkersCleanup() {
   try {
@@ -29,26 +25,30 @@ async function basicWorkersCleanup() {
 
     // Validate required environment variables
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
-      throw new Error('Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID');
+      throw new Error(
+        'Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID'
+      );
     }
 
     // Initialize service manager
     const serviceManager = new ServiceManager(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID);
-    
+
     // Validate connection
     console.log('🔍 Validating Cloudflare API connection...');
     const connectionStatus = await serviceManager.validateConnections();
-    
+
     if (!connectionStatus.overall) {
-      throw new Error(`Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`);
+      throw new Error(
+        `Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`
+      );
     }
-    
+
     console.log('✅ API connection validated successfully\n');
 
     // List all Workers scripts
     console.log('📋 Fetching Workers scripts...');
     const resources = await serviceManager.listAllResources();
-    
+
     if (resources.workers.length === 0) {
       console.log('ℹ️  No Workers scripts found in this account');
       return;
@@ -56,25 +56,27 @@ async function basicWorkersCleanup() {
 
     console.log(`📊 Found ${resources.workers.length} Workers script(s):`);
     resources.workers.forEach((script, index) => {
-      console.log(`  ${index + 1}. ${script.id} (created: ${new Date(script.created_on).toLocaleDateString()})`);
+      console.log(
+        `  ${index + 1}. ${script.id} (created: ${new Date(script.created_on).toLocaleDateString()})`
+      );
     });
     console.log();
 
     // Interactive mode - show script details and let user decide
     const scriptsToDelete = [];
-    
+
     for (const script of resources.workers) {
       console.log(`🔄 Analyzing script: ${script.id}`);
-      
+
       try {
         // Get detailed information about the script
         const details = await serviceManager.getWorkerDetails(script.id);
         const createdDate = new Date(script.created_on);
         const ageInDays = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         console.log(`   📅 Created: ${createdDate.toLocaleDateString()} (${ageInDays} days ago)`);
         console.log(`   📝 Script size: ${details.script?.length || 0} characters`);
-        
+
         // Check if script has routes or custom domains
         if (details.routes && details.routes.length > 0) {
           console.log(`   🌐 Routes configured: ${details.routes.length}`);
@@ -117,12 +119,11 @@ async function basicWorkersCleanup() {
         } else {
           console.log(`   ✅ Script appears to be in use - keeping`);
         }
-
       } catch (scriptError) {
         console.error(`   ⚠️  Warning: Could not analyze ${script.id}: ${scriptError.message}`);
         continue;
       }
-      
+
       console.log(); // Add spacing between scripts
     }
 
@@ -141,32 +142,34 @@ async function basicWorkersCleanup() {
     // Perform cleanup with safety options
     const dryRun = DEFAULT_DRY_RUN === 'true';
     console.log(`${dryRun ? '🔍 [DRY RUN]' : '🗑️  [ACTUAL]'} Cleaning up suggested scripts...`);
-    
+
     const scriptIds = scriptsToDelete.map(item => item.script.id);
-    const result = await serviceManager.bulkDeleteWorkers(
-      scriptIds,
-      {
-        dryRun,
-        batchSize: 3,
-        validateBeforeDelete: true
-      }
-    );
+    const result = await serviceManager.bulkDeleteWorkers(scriptIds, {
+      dryRun,
+      batchSize: 3,
+      validateBeforeDelete: true
+    });
 
     console.log(`✅ Cleanup completed: ${result.success} succeeded, ${result.failed} failed`);
-    
+
     if (result.failed > 0) {
       console.log(`⚠️  Some deletions failed. Check logs for details.`);
     }
 
     if (result.success > 0) {
-      console.log(`🎉 Successfully ${dryRun ? 'identified' : 'cleaned up'} ${result.success} Workers script(s)`);
-    }
-    
-    if (dryRun) {
-      console.log('\n💡 Tip: Set DEFAULT_DRY_RUN=false in your .env file to perform actual cleanup');
-      console.log('⚠️  Important: Always review suggested scripts carefully before actual deletion');
+      console.log(
+        `🎉 Successfully ${dryRun ? 'identified' : 'cleaned up'} ${result.success} Workers script(s)`
+      );
     }
 
+    if (dryRun) {
+      console.log(
+        '\n💡 Tip: Set DEFAULT_DRY_RUN=false in your .env file to perform actual cleanup'
+      );
+      console.log(
+        '⚠️  Important: Always review suggested scripts carefully before actual deletion'
+      );
+    }
   } catch (error) {
     console.error('❌ Cleanup failed:', error.message);
     logger.error('Basic Workers cleanup failed', { error: error.message, stack: error.stack });
@@ -176,11 +179,10 @@ async function basicWorkersCleanup() {
 
 // Execute the cleanup if this script is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  basicWorkersCleanup()
-    .catch(error => {
-      console.error('❌ Unhandled error:', error);
-      process.exit(1);
-    });
+  basicWorkersCleanup().catch(error => {
+    console.error('❌ Unhandled error:', error);
+    process.exit(1);
+  });
 }
 
 export { basicWorkersCleanup };

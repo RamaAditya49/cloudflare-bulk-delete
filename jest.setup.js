@@ -5,5 +5,5 @@ global.console = {
   ...console,
   log: () => {},
   warn: () => {},
-  error: () => {},
+  error: () => {}
 };

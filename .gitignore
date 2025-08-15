@@ -132,3 +132,6 @@ build/
 # Package files
 *.tgz
 *.tar.gz
+
+# Private planning documents
+plan/

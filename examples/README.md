@@ -27,11 +27,13 @@ examples/
 ## 🚀 Quick Start
 
 1. **Copy environment variables**:
+
    ```bash
    cp examples/configuration/.env.example .env
    ```
 
 2. **Configure your credentials** in `.env`:
+
    ```bash
    CLOUDFLARE_API_TOKEN=your_token_here
    CLOUDFLARE_ACCOUNT_ID=your_account_id_here
@@ -45,15 +47,18 @@ examples/
 ## 📚 Examples by Use Case
 
 ### Basic Operations
+
 - **[pages-cleanup.js](./basic/pages-cleanup.js)** - Delete old Pages deployments
 - **[workers-cleanup.js](./basic/workers-cleanup.js)** - Clean up Workers versions
 
 ### Advanced Workflows
+
 - **[bulk-preview-cleanup.js](./advanced/bulk-preview-cleanup.js)** - Bulk cleanup of preview environments
 - **[production-safety.js](./advanced/production-safety.js)** - Safe production cleanup with validation
 - **[scheduled-cleanup.js](./advanced/scheduled-cleanup.js)** - Automated cleanup schedules
 
 ### Programmatic Usage
+
 - **[custom-integration.js](./programmatic/custom-integration.js)** - Integration with existing applications
 - **[batch-processing.js](./programmatic/batch-processing.js)** - Process multiple resources efficiently
 - **[monitoring-cleanup.js](./programmatic/monitoring-cleanup.js)** - Cleanup with monitoring and alerts
@@ -75,6 +80,7 @@ Examples use environment variables for configuration. See [`configuration/.env.e
 ## 📖 Documentation
 
 For detailed documentation, see:
+
 - [Main README](../README.md) - Project overview
 - [API Documentation](../docs/API.md) - Programmatic usage
 - [CLI Documentation](../docs/CLI.md) - Command line usage

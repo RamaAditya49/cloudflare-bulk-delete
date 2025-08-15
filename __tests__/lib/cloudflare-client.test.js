@@ -1,19 +1,55 @@
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
-import { CloudflareClient } from '../../src/lib/cloudflare-client.js';
 
-// Mock axios
-const mockAxios = {
-  defaults: { headers: { common: {} } },
+// Create proper axios mock
+const mockAxiosInstance = {
   get: jest.fn(),
   post: jest.fn(),
-  put: jest.fn(),
   delete: jest.fn(),
-  create: jest.fn(() => mockAxios)
+  interceptors: {
+    response: {
+      use: jest.fn()
+    }
+  }
+};
+
+const mockAxios = {
+  create: jest.fn(() => mockAxiosInstance),
+  defaults: { headers: { common: {} } }
 };
 
 jest.unstable_mockModule('axios', () => ({
   default: mockAxios
 }));
+
+// Mock config
+jest.unstable_mockModule('../../src/config/config.js', () => ({
+  config: {
+    cloudflare: {
+      apiToken: 'default-token',
+      accountId: 'default-account',
+      baseUrl: 'https://api.cloudflare.com/client/v4',
+      rateLimit: {
+        concurrent: 5,
+        delay: 100
+      }
+    },
+    cli: {
+      timeout: 30000
+    }
+  }
+}));
+
+// Mock logger
+jest.unstable_mockModule('../../src/utils/logger.js', () => ({
+  logger: {
+    error: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn()
+  }
+}));
+
+// Import after mocking
+const { CloudflareClient } = await import('../../src/lib/cloudflare-client.js');
 
 describe('CloudflareClient', () => {
   let client;
@@ -32,49 +68,38 @@ describe('CloudflareClient', () => {
     });
 
     test('should throw error if token is missing', () => {
-      expect(() => new CloudflareClient(null, mockAccountId)).toThrow('API token is required');
+      expect(() => new CloudflareClient(null, mockAccountId)).toThrow('API Token and Account ID are required for Cloudflare Client');
     });
 
     test('should throw error if account ID is missing', () => {
-      expect(() => new CloudflareClient(mockToken, null)).toThrow('Account ID is required');
+      expect(() => new CloudflareClient(mockToken, null)).toThrow('API Token and Account ID are required for Cloudflare Client');
     });
   });
 
-  describe('makeRequest', () => {
-    test('should make successful API request', async () => {
+  describe('get method', () => {
+    test('should make successful GET request', async () => {
       const mockResponse = {
         data: {
           success: true,
           result: { test: 'data' }
         }
       };
-      mockAxios.get.mockResolvedValue(mockResponse);
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
-      const result = await client.makeRequest('GET', '/test');
+      const result = await client.get('/test');
 
-      expect(result).toEqual({ test: 'data' });
-      expect(mockAxios.get).toHaveBeenCalledWith('/test', undefined);
+      expect(result).toEqual(mockResponse.data);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/test', { params: {} });
     });
 
-    test('should handle API errors', async () => {
-      const mockError = {
-        response: {
-          data: {
-            success: false,
-            errors: [{ message: 'API Error' }]
-          }
-        }
-      };
-      mockAxios.get.mockRejectedValue(mockError);
+    test('should handle GET request with parameters', async () => {
+      const mockResponse = { data: { success: true, result: [] } };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
-      await expect(client.makeRequest('GET', '/test')).rejects.toThrow('API Error');
-    });
+      const params = { page: 1, limit: 10 };
+      await client.get('/test', params);
 
-    test('should handle network errors', async () => {
-      const networkError = new Error('Network Error');
-      mockAxios.get.mockRejectedValue(networkError);
-
-      await expect(client.makeRequest('GET', '/test')).rejects.toThrow('Network Error');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/test', { params });
     });
   });
 
@@ -86,7 +111,7 @@ describe('CloudflareClient', () => {
           result: { user: 'test@example.com' }
         }
       };
-      mockAxios.get.mockResolvedValue(mockResponse);
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
       const result = await client.validateConnection();
 
@@ -97,20 +122,16 @@ describe('CloudflareClient', () => {
       });
     });
 
-    test('should handle invalid token', async () => {
-      const mockError = {
-        response: {
-          data: {
-            success: false,
-            errors: [{ message: 'Invalid token' }]
-          }
-        }
-      };
-      mockAxios.get.mockRejectedValue(mockError);
+    test('should handle invalid token and fallback to general validation', async () => {
+      // First call fails (account-specific)
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Account validation failed'));
+      // Second call fails (general)
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('General validation failed'));
 
       const result = await client.validateConnection();
 
       expect(result.valid).toBe(false);
+      expect(result.error).toContain('Both validation methods failed');
     });
   });
 });

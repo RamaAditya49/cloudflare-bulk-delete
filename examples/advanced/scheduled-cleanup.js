@@ -2,7 +2,7 @@
 
 /**
  * Automated Scheduled Cleanup Workflow Example
- * 
+ *
  * This example demonstrates how to create automated cleanup workflows:
  * 1. Configurable scheduling with cron-like syntax
  * 2. Multiple cleanup policies (age-based, count-based, pattern-based)
@@ -37,52 +37,52 @@ const __dirname = dirname(__filename);
 const CLEANUP_POLICIES_CONFIG = {
   conservative: {
     pages: {
-      previewMaxAge: 30,      // days
-      previewMaxCount: 50,    // per project
-      productionMaxAge: 180,  // days
-      productionMaxCount: 10  // per project
+      previewMaxAge: 30, // days
+      previewMaxCount: 50, // per project
+      productionMaxAge: 180, // days
+      productionMaxCount: 10 // per project
     },
     workers: {
-      unusedMaxAge: 60,       // days
+      unusedMaxAge: 60, // days
       testScriptPatterns: ['test-', 'demo-', 'temp-']
     }
   },
-  
+
   moderate: {
     pages: {
-      previewMaxAge: 14,      // days
-      previewMaxCount: 25,    // per project
-      productionMaxAge: 90,   // days
-      productionMaxCount: 5   // per project
+      previewMaxAge: 14, // days
+      previewMaxCount: 25, // per project
+      productionMaxAge: 90, // days
+      productionMaxCount: 5 // per project
     },
     workers: {
-      unusedMaxAge: 30,       // days
+      unusedMaxAge: 30, // days
       testScriptPatterns: ['test-', 'demo-', 'temp-', 'sandbox-']
     }
   },
 
   aggressive: {
     pages: {
-      previewMaxAge: 7,       // days
-      previewMaxCount: 10,    // per project
-      productionMaxAge: 30,   // days
-      productionMaxCount: 3   // per project
+      previewMaxAge: 7, // days
+      previewMaxCount: 10, // per project
+      productionMaxAge: 30, // days
+      productionMaxCount: 3 // per project
     },
     workers: {
-      unusedMaxAge: 14,       // days
+      unusedMaxAge: 14, // days
       testScriptPatterns: ['test-', 'demo-', 'temp-', 'sandbox-', 'dev-']
     }
   },
 
   default: {
     pages: {
-      previewMaxAge: 14,      // days
-      previewMaxCount: 30,    // per project
-      productionMaxAge: 90,   // days
-      productionMaxCount: 10  // per project
+      previewMaxAge: 14, // days
+      previewMaxCount: 30, // per project
+      productionMaxAge: 90, // days
+      productionMaxCount: 10 // per project
     },
     workers: {
-      unusedMaxAge: 45,       // days
+      unusedMaxAge: 45, // days
       testScriptPatterns: ['test-', 'demo-', 'temp-']
     }
   }
@@ -135,7 +135,7 @@ function shouldRunScheduledCleanup(state, schedule) {
     case 'daily':
       return hoursSinceLastRun >= 24;
     case 'weekly':
-      return hoursSinceLastRun >= (24 * 7);
+      return hoursSinceLastRun >= 24 * 7;
     default:
       return true;
   }
@@ -192,9 +192,10 @@ function applyPagesCleanupPolicy(deployments, policy) {
 
   // Apply count-based cleanup for preview deployments (keep latest)
   if (previewDeployments.length > policy.previewMaxCount) {
-    const sortedPreviews = previewDeployments
-      .sort((a, b) => new Date(b.created_on) - new Date(a.created_on));
-    
+    const sortedPreviews = previewDeployments.sort(
+      (a, b) => new Date(b.created_on) - new Date(a.created_on)
+    );
+
     const excessPreviews = sortedPreviews.slice(policy.previewMaxCount);
     toDelete.push(...excessPreviews.filter(d => !toDelete.includes(d)));
   }
@@ -207,15 +208,16 @@ function applyPagesCleanupPolicy(deployments, policy) {
 
   // Only add old production deployments if we have newer ones
   if (productionDeployments.length > policy.productionMaxCount) {
-    const sortedProduction = productionDeployments
-      .sort((a, b) => new Date(b.created_on) - new Date(a.created_on));
-    
+    const sortedProduction = productionDeployments.sort(
+      (a, b) => new Date(b.created_on) - new Date(a.created_on)
+    );
+
     const excessProduction = sortedProduction.slice(policy.productionMaxCount);
     const oldExcessProduction = excessProduction.filter(deployment => {
       const age = calculateAge(deployment.created_on);
       return age > policy.productionMaxAge;
     });
-    
+
     toDelete.push(...oldExcessProduction.filter(d => !toDelete.includes(d)));
   }
 
@@ -229,9 +231,9 @@ function applyWorkersCleanupPolicy(workers, policy, serviceManager) {
 
   workers.forEach(worker => {
     const age = calculateAge(worker.created_on);
-    
+
     // Check if it matches test script patterns
-    const isTestScript = policy.testScriptPatterns.some(pattern => 
+    const isTestScript = policy.testScriptPatterns.some(pattern =>
       worker.id.toLowerCase().includes(pattern.toLowerCase())
     );
 
@@ -302,7 +304,9 @@ async function scheduledCleanup() {
     // Get all resources
     console.log('📋 Fetching all resources...');
     const resources = await serviceManager.listAllResources();
-    console.log(`📊 Found ${resources.pages.length} Pages projects, ${resources.workers.length} Workers scripts\n`);
+    console.log(
+      `📊 Found ${resources.pages.length} Pages projects, ${resources.workers.length} Workers scripts\n`
+    );
 
     const cleanupResults = {
       pages: { processed: 0, cleaned: 0, failed: 0, projects: [] },
@@ -315,17 +319,17 @@ async function scheduledCleanup() {
 
       for (const [index, project] of resources.pages.entries()) {
         console.log(`📦 [${index + 1}/${resources.pages.length}] ${project.name}`);
-        
+
         try {
           const deployments = await serviceManager.listDeployments('pages', project.name);
-          
+
           if (deployments.length === 0) {
             console.log(`   ℹ️  No deployments found`);
             continue;
           }
 
           const deploymentsToDelete = applyPagesCleanupPolicy(deployments, policy.pages);
-          
+
           if (deploymentsToDelete.length === 0) {
             console.log(`   ✨ No deployments need cleanup`);
             continue;
@@ -356,7 +360,6 @@ async function scheduledCleanup() {
           });
 
           console.log(`   ✅ Completed: ${result.success} cleaned, ${result.failed} failed`);
-
         } catch (error) {
           console.error(`   ❌ Failed: ${error.message}`);
           cleanupResults.pages.failed++;
@@ -370,12 +373,16 @@ async function scheduledCleanup() {
     // Process Workers (simplified for example)
     if (resources.workers.length > 0) {
       console.log('⚙️  Processing Workers scripts...\n');
-      
-      const workersToDelete = applyWorkersCleanupPolicy(resources.workers, policy.workers, serviceManager);
-      
+
+      const workersToDelete = applyWorkersCleanupPolicy(
+        resources.workers,
+        policy.workers,
+        serviceManager
+      );
+
       if (workersToDelete.length > 0) {
         console.log(`🧹 Cleaning ${workersToDelete.length} Workers script(s)...`);
-        
+
         try {
           const result = await serviceManager.bulkDeleteWorkers(
             workersToDelete.map(w => w.id),
@@ -436,7 +443,6 @@ async function scheduledCleanup() {
 
     // Send completion notification
     await sendWebhookNotification('cleanup_completed', runSummary);
-
   } catch (error) {
     console.error('❌ Scheduled cleanup failed:', error.message);
     logger.error('Scheduled cleanup failed', { error: error.message, stack: error.stack, runId });
@@ -468,11 +474,10 @@ async function scheduledCleanup() {
 
 // Execute the cleanup if this script is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  scheduledCleanup()
-    .catch(error => {
-      console.error('❌ Unhandled error:', error);
-      process.exit(1);
-    });
+  scheduledCleanup().catch(error => {
+    console.error('❌ Unhandled error:', error);
+    process.exit(1);
+  });
 }
 
 export { scheduledCleanup, CLEANUP_POLICIES_CONFIG };

@@ -2,7 +2,7 @@
 
 /**
  * Advanced Bulk Preview Cleanup Example
- * 
+ *
  * This example demonstrates advanced cleanup scenarios:
  * 1. Cross-project preview deployment cleanup
  * 2. Age-based filtering with customizable thresholds
@@ -76,7 +76,7 @@ function formatDuration(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
   } else if (minutes > 0) {
@@ -88,7 +88,7 @@ function formatDuration(milliseconds) {
 
 async function bulkPreviewCleanup() {
   let progress = await loadProgress();
-  
+
   try {
     console.log('🚀 Starting Advanced Bulk Preview Cleanup\n');
     console.log('📋 Configuration:');
@@ -100,26 +100,30 @@ async function bulkPreviewCleanup() {
 
     // Validate required environment variables
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
-      throw new Error('Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID');
+      throw new Error(
+        'Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID'
+      );
     }
 
     // Initialize service manager
     const serviceManager = new ServiceManager(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID);
-    
+
     // Validate connection
     console.log('🔍 Validating Cloudflare API connection...');
     const connectionStatus = await serviceManager.validateConnections();
-    
+
     if (!connectionStatus.overall) {
-      throw new Error(`Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`);
+      throw new Error(
+        `Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`
+      );
     }
-    
+
     console.log('✅ API connection validated successfully\n');
 
     // Get all Pages projects
     console.log('📋 Fetching all Pages projects...');
     const resources = await serviceManager.listAllResources();
-    
+
     if (resources.pages.length === 0) {
       console.log('ℹ️  No Pages projects found in this account');
       await cleanupProgress();
@@ -143,11 +147,11 @@ async function bulkPreviewCleanup() {
     for (const [index, project] of remainingProjects.entries()) {
       const projectNumber = resources.pages.length - remainingProjects.length + index + 1;
       console.log(`📦 [${projectNumber}/${resources.pages.length}] Processing: ${project.name}`);
-      
+
       try {
         // Get all deployments for this project
         const deployments = await serviceManager.listDeployments('pages', project.name);
-        
+
         if (deployments.length === 0) {
           console.log(`   ℹ️  No deployments found`);
           progress.processedProjects.push(project.name);
@@ -160,10 +164,7 @@ async function bulkPreviewCleanup() {
         // Filter preview deployments older than threshold
         const oldPreviewDeployments = deployments.filter(deployment => {
           const age = calculateAge(deployment.created_on);
-          return (
-            deployment.environment === 'preview' &&
-            age > CONFIG.ageThresholdDays
-          );
+          return deployment.environment === 'preview' && age > CONFIG.ageThresholdDays;
         });
 
         if (oldPreviewDeployments.length === 0) {
@@ -173,8 +174,10 @@ async function bulkPreviewCleanup() {
           continue;
         }
 
-        console.log(`   🧹 Found ${oldPreviewDeployments.length} old preview deployment(s) to clean up`);
-        
+        console.log(
+          `   🧹 Found ${oldPreviewDeployments.length} old preview deployment(s) to clean up`
+        );
+
         // Show age distribution
         const ageGroups = {
           '7-30 days': 0,
@@ -202,14 +205,18 @@ async function bulkPreviewCleanup() {
           batches.push(oldPreviewDeployments.slice(i, i + CONFIG.batchSize));
         }
 
-        console.log(`   ⚡ Processing ${batches.length} batch(es) of up to ${CONFIG.batchSize} deployments each`);
+        console.log(
+          `   ⚡ Processing ${batches.length} batch(es) of up to ${CONFIG.batchSize} deployments each`
+        );
 
         let projectSuccess = 0;
         let projectFailed = 0;
 
         for (const [batchIndex, batch] of batches.entries()) {
-          console.log(`   🔄 Batch ${batchIndex + 1}/${batches.length}: Processing ${batch.length} deployment(s)...`);
-          
+          console.log(
+            `   🔄 Batch ${batchIndex + 1}/${batches.length}: Processing ${batch.length} deployment(s)...`
+          );
+
           try {
             const result = await serviceManager.bulkDeleteDeployments(
               'pages',
@@ -225,14 +232,15 @@ async function bulkPreviewCleanup() {
             projectSuccess += result.success;
             projectFailed += result.failed;
 
-            console.log(`      ✅ Batch completed: ${result.success} succeeded, ${result.failed} failed`);
+            console.log(
+              `      ✅ Batch completed: ${result.success} succeeded, ${result.failed} failed`
+            );
 
             // Rate limiting between batches
             if (batchIndex < batches.length - 1 && CONFIG.rateLimitDelay > 0) {
               console.log(`      ⏱️  Rate limiting: waiting ${CONFIG.rateLimitDelay}ms...`);
               await new Promise(resolve => setTimeout(resolve, CONFIG.rateLimitDelay));
             }
-
           } catch (batchError) {
             console.error(`      ❌ Batch ${batchIndex + 1} failed:`, batchError.message);
             projectFailed += batch.length;
@@ -246,9 +254,8 @@ async function bulkPreviewCleanup() {
         progress.processedProjects.push(project.name);
 
         console.log(`   📊 Project summary: ${projectSuccess} succeeded, ${projectFailed} failed`);
-        
-        await saveProgress(progress);
 
+        await saveProgress(progress);
       } catch (projectError) {
         console.error(`   ❌ Project processing failed:`, projectError.message);
         progress.skippedProjects.push({
@@ -259,7 +266,7 @@ async function bulkPreviewCleanup() {
         await saveProgress(progress);
         continue;
       }
-      
+
       console.log(); // Add spacing between projects
     }
 
@@ -268,12 +275,16 @@ async function bulkPreviewCleanup() {
     console.log('🎉 Bulk Preview Cleanup Completed!\n');
     console.log('📊 Final Statistics:');
     console.log(`   Total runtime: ${formatDuration(duration)}`);
-    console.log(`   Projects processed: ${progress.processedProjects.length}/${resources.pages.length}`);
+    console.log(
+      `   Projects processed: ${progress.processedProjects.length}/${resources.pages.length}`
+    );
     console.log(`   Total deployments analyzed: ${progress.totalDeployments}`);
-    console.log(`   Deployments ${CONFIG.dryRun ? 'identified for cleanup' : 'cleaned up'}: ${progress.deletedDeployments}`);
+    console.log(
+      `   Deployments ${CONFIG.dryRun ? 'identified for cleanup' : 'cleaned up'}: ${progress.deletedDeployments}`
+    );
     console.log(`   Failed operations: ${progress.failedDeletions}`);
     console.log(`   Skipped projects: ${progress.skippedProjects.length}`);
-    
+
     if (progress.skippedProjects.length > 0) {
       console.log('\n⚠️  Skipped projects:');
       progress.skippedProjects.forEach((skipped, index) => {
@@ -282,17 +293,24 @@ async function bulkPreviewCleanup() {
     }
 
     if (CONFIG.dryRun) {
-      console.log('\n💡 Tip: Set DEFAULT_DRY_RUN=false in your .env file to perform actual cleanup');
+      console.log(
+        '\n💡 Tip: Set DEFAULT_DRY_RUN=false in your .env file to perform actual cleanup'
+      );
     }
 
     // Clean up progress file on successful completion
     await cleanupProgress();
-
   } catch (error) {
     console.error('❌ Bulk cleanup failed:', error.message);
-    logger.error('Bulk preview cleanup failed', { error: error.message, stack: error.stack, progress });
-    
-    console.log('\n💾 Progress has been saved. You can resume the operation by running the script again.');
+    logger.error('Bulk preview cleanup failed', {
+      error: error.message,
+      stack: error.stack,
+      progress
+    });
+
+    console.log(
+      '\n💾 Progress has been saved. You can resume the operation by running the script again.'
+    );
     process.exit(1);
   }
 }
@@ -305,11 +323,10 @@ process.on('SIGINT', async () => {
 
 // Execute the cleanup if this script is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  bulkPreviewCleanup()
-    .catch(error => {
-      console.error('❌ Unhandled error:', error);
-      process.exit(1);
-    });
+  bulkPreviewCleanup().catch(error => {
+    console.error('❌ Unhandled error:', error);
+    process.exit(1);
+  });
 }
 
 export { bulkPreviewCleanup };

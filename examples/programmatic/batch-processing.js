@@ -1,6 +1,6 @@
 /**
  * Batch Processing Example
- * 
+ *
  * This example demonstrates advanced batch processing capabilities:
  * 1. Intelligent batching with dynamic sizing
  * 2. Parallel processing with concurrency control
@@ -23,7 +23,7 @@ import os from 'os';
 export class CloudflareBatchProcessor extends EventEmitter {
   constructor(apiToken, accountId, options = {}) {
     super();
-    
+
     this.serviceManager = new ServiceManager(apiToken, accountId);
     this.options = {
       maxConcurrency: Math.min(options.maxConcurrency || 3, os.cpus().length),
@@ -85,7 +85,7 @@ export class CloudflareBatchProcessor extends EventEmitter {
         timestamp: Date.now(),
         options: this.options
       };
-      
+
       await fs.writeFile(this.options.resumeFile, JSON.stringify(stateData, null, 2));
       this.state.lastSaveTime = Date.now();
       this.emit('state-saved', { timestamp: this.state.lastSaveTime });
@@ -99,7 +99,7 @@ export class CloudflareBatchProcessor extends EventEmitter {
     try {
       const stateData = await fs.readFile(this.options.resumeFile, 'utf-8');
       const savedState = JSON.parse(stateData);
-      
+
       // Merge saved state with current state
       this.state = {
         ...this.state,
@@ -110,12 +110,12 @@ export class CloudflareBatchProcessor extends EventEmitter {
           lastReset: Date.now()
         }
       };
-      
-      this.emit('state-loaded', { 
+
+      this.emit('state-loaded', {
         resumedItems: this.state.processedItems,
         totalItems: this.state.totalItems
       });
-      
+
       return true;
     } catch (error) {
       // File doesn't exist or is corrupted - start fresh
@@ -136,7 +136,7 @@ export class CloudflareBatchProcessor extends EventEmitter {
    */
   async applyRateLimit() {
     const now = Date.now();
-    
+
     // Reset window if needed
     if (now - this.state.rateLimiter.lastReset > this.options.rateLimit.window) {
       this.state.rateLimiter.requests = [];
@@ -147,7 +147,7 @@ export class CloudflareBatchProcessor extends EventEmitter {
     if (this.state.rateLimiter.requests.length >= this.options.rateLimit.requests) {
       const oldestRequest = Math.min(...this.state.rateLimiter.requests);
       const waitTime = this.options.rateLimit.window - (now - oldestRequest);
-      
+
       if (waitTime > 0) {
         this.emit('rate-limit-wait', { waitTime });
         await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -167,14 +167,18 @@ export class CloudflareBatchProcessor extends EventEmitter {
     const errorRate = errors / (success + errors);
 
     // Increase batch size if performance is good
-    if (errorRate < 0.1 && avgTime < 2000 && this.state.currentBatchSize < this.options.maxBatchSize) {
+    if (
+      errorRate < 0.1 &&
+      avgTime < 2000 &&
+      this.state.currentBatchSize < this.options.maxBatchSize
+    ) {
       this.state.currentBatchSize = Math.min(
         this.state.currentBatchSize + 2,
         this.options.maxBatchSize
       );
-      this.emit('batch-size-adjusted', { 
-        newSize: this.state.currentBatchSize, 
-        reason: 'performance-increase' 
+      this.emit('batch-size-adjusted', {
+        newSize: this.state.currentBatchSize,
+        reason: 'performance-increase'
       });
     }
     // Decrease batch size if there are issues
@@ -183,9 +187,9 @@ export class CloudflareBatchProcessor extends EventEmitter {
         this.state.currentBatchSize - 2,
         this.options.minBatchSize
       );
-      this.emit('batch-size-adjusted', { 
-        newSize: this.state.currentBatchSize, 
-        reason: 'performance-decrease' 
+      this.emit('batch-size-adjusted', {
+        newSize: this.state.currentBatchSize,
+        reason: 'performance-decrease'
       });
     }
   }
@@ -213,11 +217,11 @@ export class CloudflareBatchProcessor extends EventEmitter {
       priority
     });
 
-    this.emit('queue-created', { 
-      name, 
-      totalBatches: batches.length, 
+    this.emit('queue-created', {
+      name,
+      totalBatches: batches.length,
       totalItems: items.length,
-      priority 
+      priority
     });
 
     return batches.length;
@@ -232,8 +236,8 @@ export class CloudflareBatchProcessor extends EventEmitter {
     let selectedBatch = null;
 
     for (const [queueName, queue] of this.state.queues) {
-      const availableBatch = queue.batches.find(batch => 
-        batch.attempts < batch.maxAttempts && !batch.processing
+      const availableBatch = queue.batches.find(
+        batch => batch.attempts < batch.maxAttempts && !batch.processing
       );
 
       if (availableBatch && queue.priority > highestPriority) {
@@ -246,7 +250,7 @@ export class CloudflareBatchProcessor extends EventEmitter {
     if (selectedBatch) {
       selectedBatch.processing = true;
       selectedBatch.startTime = Date.now();
-      
+
       this.emit('batch-started', {
         queueName: selectedQueue,
         batchId: selectedBatch.id,
@@ -294,7 +298,7 @@ export class CloudflareBatchProcessor extends EventEmitter {
       }
 
       const processingTime = Date.now() - startTime;
-      
+
       // Update state
       const queue = this.state.queues.get(queueName);
       queue.processedItems += batch.items.length;
@@ -320,7 +324,6 @@ export class CloudflareBatchProcessor extends EventEmitter {
       });
 
       return result;
-
     } catch (error) {
       batch.processing = false;
       batch.error = error.message;
@@ -369,7 +372,8 @@ export class CloudflareBatchProcessor extends EventEmitter {
     const percentage = (this.state.processedItems / this.state.totalItems) * 100;
     const itemsPerSecond = this.state.processedItems / (elapsedTime / 1000);
     const remainingItems = this.state.totalItems - this.state.processedItems;
-    const estimatedTimeRemaining = itemsPerSecond > 0 ? (remainingItems / itemsPerSecond) * 1000 : null;
+    const estimatedTimeRemaining =
+      itemsPerSecond > 0 ? (remainingItems / itemsPerSecond) * 1000 : null;
 
     return {
       percentage: Math.round(percentage * 100) / 100,
@@ -404,10 +408,9 @@ export class CloudflareBatchProcessor extends EventEmitter {
           const work = this.getNextBatch();
           if (!work) break;
 
-          const workerPromise = this.processBatch(work.queue, work.batch)
-            .finally(() => {
-              activeWorkers.delete(workerPromise);
-            });
+          const workerPromise = this.processBatch(work.queue, work.batch).finally(() => {
+            activeWorkers.delete(workerPromise);
+          });
 
           activeWorkers.add(workerPromise);
         }
@@ -442,7 +445,6 @@ export class CloudflareBatchProcessor extends EventEmitter {
       });
 
       await this.cleanupState();
-
     } catch (error) {
       this.emit('processing-failed', {
         error: error.message,
@@ -481,26 +483,32 @@ export async function largePagesCleanupExample() {
   );
 
   // Set up event listeners
-  processor.on('processing-started', (data) => {
-    console.log(`🚀 Started batch processing: ${data.totalItems} items across ${data.totalQueues} queues`);
+  processor.on('processing-started', data => {
+    console.log(
+      `🚀 Started batch processing: ${data.totalItems} items across ${data.totalQueues} queues`
+    );
   });
 
-  processor.on('progress', (progress) => {
-    console.log(`📊 Progress: ${progress.percentage}% - ${progress.processedItems}/${progress.totalItems} items`);
+  processor.on('progress', progress => {
+    console.log(
+      `📊 Progress: ${progress.percentage}% - ${progress.processedItems}/${progress.totalItems} items`
+    );
     if (progress.eta) {
       console.log(`⏰ ETA: ${progress.eta.toLocaleTimeString()}`);
     }
   });
 
-  processor.on('batch-size-adjusted', (data) => {
+  processor.on('batch-size-adjusted', data => {
     console.log(`⚙️  Batch size adjusted to ${data.newSize} (${data.reason})`);
   });
 
-  processor.on('memory-warning', (data) => {
-    console.log(`⚠️  Memory warning: ${Math.round(data.current / 1024 / 1024)}MB / ${Math.round(data.threshold / 1024 / 1024)}MB`);
+  processor.on('memory-warning', data => {
+    console.log(
+      `⚠️  Memory warning: ${Math.round(data.current / 1024 / 1024)}MB / ${Math.round(data.threshold / 1024 / 1024)}MB`
+    );
   });
 
-  processor.on('processing-completed', (data) => {
+  processor.on('processing-completed', data => {
     console.log(`🎉 Processing completed in ${Math.round(data.totalTime / 1000)}s`);
     console.log(`📊 Final stats: ${data.succeededItems} succeeded, ${data.failedItems} failed`);
   });
@@ -527,10 +535,12 @@ export async function largePagesCleanupExample() {
     for (const project of resources.pages) {
       try {
         const deployments = await serviceManager.listDeployments('pages', project.name);
-        
+
         // Filter old preview deployments
         const oldPreviews = deployments.filter(deployment => {
-          const age = Math.floor((Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24));
+          const age = Math.floor(
+            (Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24)
+          );
           return deployment.environment === 'preview' && age > 14;
         });
 
@@ -540,11 +550,12 @@ export async function largePagesCleanupExample() {
             oldPreviews,
             1 // Priority: 1 for regular cleanup
           );
-          
-          totalDeployments += oldPreviews.length;
-          console.log(`📦 Queued ${oldPreviews.length} deployments from ${project.name} (${batchCount} batches)`);
-        }
 
+          totalDeployments += oldPreviews.length;
+          console.log(
+            `📦 Queued ${oldPreviews.length} deployments from ${project.name} (${batchCount} batches)`
+          );
+        }
       } catch (error) {
         console.error(`❌ Failed to analyze project ${project.name}: ${error.message}`);
       }
@@ -559,7 +570,6 @@ export async function largePagesCleanupExample() {
 
     // Start batch processing
     await processor.processAllQueues();
-
   } catch (error) {
     console.error('❌ Batch processing failed:', error.message);
     throw error;
@@ -590,14 +600,14 @@ export async function mixedWorkloadExample() {
 
     // High priority: Emergency cleanup (very old deployments)
     let emergencyCount = 0;
-    
+
     // Normal priority: Regular cleanup
     let regularCount = 0;
 
     // Process Pages projects
     for (const project of resources.pages) {
       const deployments = await serviceManager.listDeployments('pages', project.name);
-      
+
       // Emergency cleanup: deployments older than 90 days
       const emergency = deployments.filter(d => {
         const age = Math.floor((Date.now() - new Date(d.created_on)) / (1000 * 60 * 60 * 24));
@@ -624,7 +634,7 @@ export async function mixedWorkloadExample() {
     // Low priority: Workers cleanup
     if (resources.workers.length > 0) {
       const testWorkers = resources.workers.filter(worker => {
-        const isTest = ['test-', 'demo-', 'temp-'].some(prefix => 
+        const isTest = ['test-', 'demo-', 'temp-'].some(prefix =>
           worker.id.toLowerCase().includes(prefix)
         );
         const age = Math.floor((Date.now() - new Date(worker.created_on)) / (1000 * 60 * 60 * 24));
@@ -644,7 +654,6 @@ export async function mixedWorkloadExample() {
     console.log(`   Workers: ${resources.workers.length} items (priority 1)`);
 
     await processor.processAllQueues();
-
   } catch (error) {
     console.error('❌ Mixed workload processing failed:', error.message);
     throw error;
@@ -652,40 +661,53 @@ export async function mixedWorkloadExample() {
 }
 
 function setupProcessorMonitoring(processor) {
-  processor.on('processing-started', (data) => {
-    console.log(`🚀 Batch processing started: ${data.totalItems} items, ${data.maxConcurrency} workers`);
+  processor.on('processing-started', data => {
+    console.log(
+      `🚀 Batch processing started: ${data.totalItems} items, ${data.maxConcurrency} workers`
+    );
   });
 
-  processor.on('queue-created', (data) => {
-    console.log(`📋 Queue created: ${data.name} (${data.totalItems} items, ${data.totalBatches} batches, priority ${data.priority})`);
+  processor.on('queue-created', data => {
+    console.log(
+      `📋 Queue created: ${data.name} (${data.totalItems} items, ${data.totalBatches} batches, priority ${data.priority})`
+    );
   });
 
-  processor.on('batch-started', (data) => {
-    console.log(`🔄 Batch started: ${data.batchId} (${data.itemCount} items, attempt ${data.attempt})`);
+  processor.on('batch-started', data => {
+    console.log(
+      `🔄 Batch started: ${data.batchId} (${data.itemCount} items, attempt ${data.attempt})`
+    );
   });
 
-  processor.on('batch-completed', (data) => {
-    console.log(`✅ Batch completed: ${data.batchId} - ${data.result.success} succeeded, ${data.result.failed} failed (${data.processingTime}ms)`);
+  processor.on('batch-completed', data => {
+    console.log(
+      `✅ Batch completed: ${data.batchId} - ${data.result.success} succeeded, ${data.result.failed} failed (${data.processingTime}ms)`
+    );
   });
 
-  processor.on('batch-failed', (data) => {
-    console.log(`❌ Batch failed: ${data.batchId} - ${data.error} (attempt ${data.attempt}${data.willRetry ? ', will retry' : ', max attempts reached'})`);
+  processor.on('batch-failed', data => {
+    console.log(
+      `❌ Batch failed: ${data.batchId} - ${data.error} (attempt ${data.attempt}${data.willRetry ? ', will retry' : ', max attempts reached'})`
+    );
   });
 
-  processor.on('progress', (data) => {
-    if (data.processedItems % 50 === 0) { // Log every 50 items
-      console.log(`📊 Progress: ${data.percentage}% (${data.processedItems}/${data.totalItems}) - ${data.itemsPerSecond} items/sec`);
+  processor.on('progress', data => {
+    if (data.processedItems % 50 === 0) {
+      // Log every 50 items
+      console.log(
+        `📊 Progress: ${data.percentage}% (${data.processedItems}/${data.totalItems}) - ${data.itemsPerSecond} items/sec`
+      );
       if (data.eta) {
         console.log(`⏰ ETA: ${data.eta.toLocaleString()}`);
       }
     }
   });
 
-  processor.on('rate-limit-wait', (data) => {
+  processor.on('rate-limit-wait', data => {
     console.log(`⏳ Rate limit reached, waiting ${Math.round(data.waitTime / 1000)}s...`);
   });
 
-  processor.on('processing-completed', (data) => {
+  processor.on('processing-completed', data => {
     console.log(`🎉 All queues processed successfully!`);
     console.log(`📊 Final Results:`);
     console.log(`   Total time: ${Math.round(data.totalTime / 1000)}s`);

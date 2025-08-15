@@ -1,9 +1,9 @@
 /**
  * Custom Integration Example - Using as a Library
- * 
+ *
  * This example demonstrates how to integrate the Cloudflare Bulk Delete tool
  * into your own Node.js applications, CI/CD pipelines, or automation scripts.
- * 
+ *
  * Features demonstrated:
  * 1. Library integration patterns
  * 2. Custom event handling and hooks
@@ -28,7 +28,7 @@ export class CloudflareCleanupIntegration {
       enableMetrics: true,
       ...options
     };
-    
+
     this.hooks = new Map();
     this.metrics = {
       startTime: null,
@@ -45,7 +45,7 @@ export class CloudflareCleanupIntegration {
    */
   on(event, callback) {
     if (!this.options.enableHooks) return this;
-    
+
     if (!this.hooks.has(event)) {
       this.hooks.set(event, []);
     }
@@ -95,7 +95,9 @@ export class CloudflareCleanupIntegration {
       }
 
       // Age filter
-      const age = Math.floor((Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24));
+      const age = Math.floor(
+        (Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24)
+      );
       if (age < maxAge) {
         return false;
       }
@@ -115,11 +117,9 @@ export class CloudflareCleanupIntegration {
       if (excludePatterns.length > 0) {
         const excluded = excludePatterns.some(pattern => {
           if (typeof pattern === 'string') {
-            return deployment.source?.branch?.includes(pattern) || 
-                   deployment.id.includes(pattern);
+            return deployment.source?.branch?.includes(pattern) || deployment.id.includes(pattern);
           }
-          return pattern.test(deployment.source?.branch || '') ||
-                 pattern.test(deployment.id);
+          return pattern.test(deployment.source?.branch || '') || pattern.test(deployment.id);
         });
         if (excluded) return false;
       }
@@ -197,7 +197,7 @@ export class CloudflareCleanupIntegration {
             });
 
             const deployments = await this.serviceManager.listDeployments('pages', project.name);
-            
+
             // Custom filtering
             const filteredResult = await this.customDeploymentFilter(
               deployments,
@@ -255,7 +255,6 @@ export class CloudflareCleanupIntegration {
                 result
               });
             }
-
           } catch (error) {
             this.metrics.errors.push({
               type: 'pages',
@@ -281,13 +280,15 @@ export class CloudflareCleanupIntegration {
         try {
           // Custom Workers filtering logic
           const workersToDelete = processedResources.resources.workers.filter(worker => {
-            const age = Math.floor((Date.now() - new Date(worker.created_on)) / (1000 * 60 * 60 * 24));
-            
+            const age = Math.floor(
+              (Date.now() - new Date(worker.created_on)) / (1000 * 60 * 60 * 24)
+            );
+
             // Default: delete test workers older than 7 days
-            const isTestWorker = ['test-', 'demo-', 'temp-'].some(prefix => 
+            const isTestWorker = ['test-', 'demo-', 'temp-'].some(prefix =>
               worker.id.toLowerCase().startsWith(prefix)
             );
-            
+
             return isTestWorker && age > (options.workersMaxAge || 7);
           });
 
@@ -310,7 +311,6 @@ export class CloudflareCleanupIntegration {
             this.metrics.totalCleaned += result.success;
             this.metrics.totalFailed += result.failed;
           }
-
         } catch (error) {
           this.metrics.errors.push({
             type: 'workers',
@@ -343,7 +343,6 @@ export class CloudflareCleanupIntegration {
       });
 
       return finalResults.results || results;
-
     } catch (error) {
       this.metrics.errors.push({
         type: 'general',
@@ -366,9 +365,9 @@ export class CloudflareCleanupIntegration {
   getMetrics() {
     return {
       ...this.metrics,
-      duration: this.metrics.endTime ? 
-        (this.metrics.endTime - this.metrics.startTime) : 
-        (Date.now() - this.metrics.startTime)
+      duration: this.metrics.endTime
+        ? this.metrics.endTime - this.metrics.startTime
+        : Date.now() - this.metrics.startTime
     };
   }
 }
@@ -419,22 +418,26 @@ export async function advancedIntegrationExample() {
 
   // Add custom hooks
   cleanup
-    .on('before-cleanup', async (data) => {
+    .on('before-cleanup', async data => {
       console.log('🚀 Starting cleanup operation...');
       // Send notification to Slack/Teams/etc.
       return data;
     })
-    .on('resources-loaded', async (data) => {
-      console.log(`📊 Found ${data.resources.pages.length} Pages projects, ${data.resources.workers.length} Workers scripts`);
+    .on('resources-loaded', async data => {
+      console.log(
+        `📊 Found ${data.resources.pages.length} Pages projects, ${data.resources.workers.length} Workers scripts`
+      );
       return data;
     })
-    .on('before-project', async (data) => {
+    .on('before-project', async data => {
       console.log(`🔄 Processing project: ${data.project.name}`);
       return data;
     })
-    .on('after-deletion', async (data) => {
-      console.log(`✅ ${data.project}: ${data.result.success} cleaned, ${data.result.failed} failed`);
-      
+    .on('after-deletion', async data => {
+      console.log(
+        `✅ ${data.project}: ${data.result.success} cleaned, ${data.result.failed} failed`
+      );
+
       // Custom logging to external system
       await logToExternalSystem({
         project: data.project,
@@ -443,28 +446,28 @@ export async function advancedIntegrationExample() {
         failed: data.result.failed,
         timestamp: new Date().toISOString()
       });
-      
+
       return data;
     })
-    .on('error', async (data) => {
+    .on('error', async data => {
       console.error(`❌ Error in ${data.type}: ${data.error.message}`);
-      
+
       // Send alert
       await sendAlert({
         type: 'cleanup_error',
         details: data,
         timestamp: new Date().toISOString()
       });
-      
+
       return data;
     })
-    .on('after-cleanup', async (data) => {
+    .on('after-cleanup', async data => {
       console.log('🎉 Cleanup completed!');
       console.log('📊 Final metrics:', data.metrics);
-      
+
       // Generate report
       await generateCleanupReport(data.results, data.metrics);
-      
+
       return data;
     });
 
@@ -478,9 +481,9 @@ export async function advancedIntegrationExample() {
         branchPatterns: ['feature/', 'fix/'],
         excludePatterns: ['hotfix/', 'release/']
       },
-      onProgress: async (progress) => {
+      onProgress: async progress => {
         console.log(`📈 Progress: ${Math.round(progress.progress * 100)}% - ${progress.project}`);
-        
+
         // Update progress in external system
         await updateProgressTracker(progress);
       }
@@ -523,7 +526,7 @@ export async function cicdPipelineExample() {
           .filter(d => d.latest_stage?.status === 'success')
           .sort((a, b) => new Date(b.created_on) - new Date(a.created_on))
           .slice(0, 3);
-        
+
         return filtered.filter(d => !recentSuccessful.includes(d));
       }
     }
@@ -532,14 +535,15 @@ export async function cicdPipelineExample() {
   try {
     console.log('🔧 Running CI/CD cleanup pipeline...');
     const results = await cleanup.cleanupWithCustomLogic(pipelineConfig);
-    
+
     // Set CI output variables
     if (process.env.GITHUB_OUTPUT) {
       const fs = await import('fs').then(m => m.promises);
-      await fs.appendFile(process.env.GITHUB_OUTPUT, 
+      await fs.appendFile(
+        process.env.GITHUB_OUTPUT,
         `cleanup-pages=${results.pages.length}\n` +
-        `cleanup-cleaned=${results.summary.totalCleaned}\n` +
-        `cleanup-failed=${results.summary.totalFailed}\n`
+          `cleanup-cleaned=${results.summary.totalCleaned}\n` +
+          `cleanup-failed=${results.summary.totalFailed}\n`
       );
     }
 

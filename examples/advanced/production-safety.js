@@ -2,7 +2,7 @@
 
 /**
  * Production Safety Cleanup Example
- * 
+ *
  * This example demonstrates production-grade safety measures:
  * 1. Multi-layer safety validation before deletion
  * 2. Emergency rollback capabilities
@@ -47,8 +47,8 @@ const rl = readline.createInterface({
 });
 
 function askQuestion(question) {
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
+  return new Promise(resolve => {
+    rl.question(question, answer => {
       resolve(answer.trim());
     });
   });
@@ -71,7 +71,7 @@ async function createBackup(type, projectName, data) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupFileName = `${type}-${projectName}-${timestamp}.json`;
     const backupPath = `${SAFETY_CONFIG.backupDirectory}/${backupFileName}`;
-    
+
     const backupData = {
       timestamp: new Date().toISOString(),
       type,
@@ -81,7 +81,7 @@ async function createBackup(type, projectName, data) {
     };
 
     await fs.writeFile(backupPath, JSON.stringify(backupData, null, 2));
-    
+
     console.log(`   💾 Backup created: ${backupFileName}`);
     return backupPath;
   } catch (error) {
@@ -106,33 +106,33 @@ async function writeAuditLog(event) {
 
 async function validateProductionSafety(deployments) {
   const productionDeployments = deployments.filter(d => d.environment === 'production');
-  
+
   if (productionDeployments.length > 0) {
     console.log('🚨 CRITICAL SAFETY WARNING: Production deployments detected!');
     console.log(`   Found ${productionDeployments.length} production deployment(s):`);
-    
+
     productionDeployments.forEach((deployment, index) => {
       console.log(`   ${index + 1}. ${deployment.id} - ${deployment.url}`);
     });
-    
+
     if (SAFETY_CONFIG.productionMode) {
       throw new Error('Production deployments cannot be deleted in production mode');
     }
-    
+
     if (SAFETY_CONFIG.requireConfirmation) {
       console.log('\n⚠️  You are about to delete PRODUCTION deployments!');
       console.log('This action is IRREVERSIBLE and may cause service outages.');
-      
+
       const confirmation = await askQuestion(
         'Type "DELETE PRODUCTION" (all caps) to confirm this dangerous operation: '
       );
-      
+
       if (confirmation !== 'DELETE PRODUCTION') {
         throw new Error('Production deletion confirmation failed');
       }
     }
   }
-  
+
   return productionDeployments.length;
 }
 
@@ -147,7 +147,7 @@ async function confirmCleanupPlan(cleanupPlan) {
   console.log(`   Production deployments: ${cleanupPlan.productionDeployments}`);
   console.log(`   Preview deployments: ${cleanupPlan.previewDeployments}`);
   console.log(`   Estimated operation time: ${cleanupPlan.estimatedTime}`);
-  
+
   console.log('\n🔍 Projects and deployment counts:');
   cleanupPlan.projects.forEach((project, index) => {
     console.log(`   ${index + 1}. ${project.name}: ${project.deploymentCount} deployment(s)`);
@@ -165,10 +165,11 @@ async function confirmCleanupPlan(cleanupPlan) {
 
 function estimateOperationTime(deploymentCount) {
   // Rough estimation: 2 seconds per deployment + overhead
-  const estimatedSeconds = (deploymentCount * 2) + (Math.ceil(deploymentCount / SAFETY_CONFIG.maxBatchSize) * 3);
+  const estimatedSeconds =
+    deploymentCount * 2 + Math.ceil(deploymentCount / SAFETY_CONFIG.maxBatchSize) * 3;
   const minutes = Math.floor(estimatedSeconds / 60);
   const seconds = estimatedSeconds % 60;
-  
+
   if (minutes > 0) {
     return `${minutes}m ${seconds}s`;
   } else {
@@ -182,26 +183,32 @@ async function productionSafetyCleanup() {
     console.log('🛡️  Safety Configuration:');
     console.log(`   Production Mode: ${SAFETY_CONFIG.productionMode ? 'ENABLED' : 'DISABLED'}`);
     console.log(`   Backup Creation: ${SAFETY_CONFIG.backupEnabled ? 'ENABLED' : 'DISABLED'}`);
-    console.log(`   User Confirmation: ${SAFETY_CONFIG.requireConfirmation ? 'REQUIRED' : 'DISABLED'}`);
+    console.log(
+      `   User Confirmation: ${SAFETY_CONFIG.requireConfirmation ? 'REQUIRED' : 'DISABLED'}`
+    );
     console.log(`   Max Batch Size: ${SAFETY_CONFIG.maxBatchSize}`);
     console.log();
 
     // Validate environment variables
     if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
-      throw new Error('Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID');
+      throw new Error(
+        'Missing required environment variables: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID'
+      );
     }
 
     // Initialize service manager
     const serviceManager = new ServiceManager(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID);
-    
+
     // Validate connection
     console.log('🔍 Validating Cloudflare API connection...');
     const connectionStatus = await serviceManager.validateConnections();
-    
+
     if (!connectionStatus.overall) {
-      throw new Error(`Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`);
+      throw new Error(
+        `Connection validation failed: Pages: ${connectionStatus.pages}, Workers: ${connectionStatus.workers}`
+      );
     }
-    
+
     console.log('✅ API connection validated\n');
 
     // Create backup directory
@@ -210,7 +217,7 @@ async function productionSafetyCleanup() {
     // Get all resources
     console.log('📋 Analyzing account resources...');
     const resources = await serviceManager.listAllResources();
-    
+
     if (resources.pages.length === 0) {
       console.log('ℹ️  No Pages projects found in this account');
       rl.close();
@@ -232,10 +239,10 @@ async function productionSafetyCleanup() {
 
     for (const project of resources.pages) {
       console.log(`🔄 Analyzing: ${project.name}`);
-      
+
       try {
         const deployments = await serviceManager.listDeployments('pages', project.name);
-        
+
         if (deployments.length === 0) {
           console.log(`   ℹ️  No deployments found`);
           continue;
@@ -243,7 +250,9 @@ async function productionSafetyCleanup() {
 
         // Filter deployments older than 7 days
         const oldDeployments = deployments.filter(deployment => {
-          const age = Math.floor((Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24));
+          const age = Math.floor(
+            (Date.now() - new Date(deployment.created_on)) / (1000 * 60 * 60 * 24)
+          );
           return age > 7;
         });
 
@@ -255,7 +264,9 @@ async function productionSafetyCleanup() {
         const productionCount = oldDeployments.filter(d => d.environment === 'production').length;
         const previewCount = oldDeployments.filter(d => d.environment === 'preview').length;
 
-        console.log(`   📦 Found ${oldDeployments.length} old deployment(s) (${productionCount} production, ${previewCount} preview)`);
+        console.log(
+          `   📦 Found ${oldDeployments.length} old deployment(s) (${productionCount} production, ${previewCount} preview)`
+        );
 
         cleanupPlan.projects.push({
           name: project.name,
@@ -268,7 +279,6 @@ async function productionSafetyCleanup() {
         cleanupPlan.totalDeployments += oldDeployments.length;
         cleanupPlan.productionDeployments += productionCount;
         cleanupPlan.previewDeployments += previewCount;
-
       } catch (error) {
         console.error(`   ❌ Analysis failed: ${error.message}`);
         await writeAuditLog({
@@ -283,14 +293,16 @@ async function productionSafetyCleanup() {
     cleanupPlan.estimatedTime = estimateOperationTime(cleanupPlan.totalDeployments);
 
     if (cleanupPlan.projects.length === 0) {
-      console.log('\n✨ No projects require cleanup. All deployments are recent or already cleaned up.');
+      console.log(
+        '\n✨ No projects require cleanup. All deployments are recent or already cleaned up.'
+      );
       rl.close();
       return;
     }
 
     // Get user confirmation for cleanup plan
     const confirmed = await confirmCleanupPlan(cleanupPlan);
-    
+
     if (!confirmed) {
       console.log('❌ Cleanup cancelled by user');
       rl.close();
@@ -304,12 +316,14 @@ async function productionSafetyCleanup() {
     let totalFailed = 0;
 
     for (const [index, projectPlan] of cleanupPlan.projects.entries()) {
-      console.log(`📦 [${index + 1}/${cleanupPlan.projects.length}] Processing: ${projectPlan.name}`);
-      
+      console.log(
+        `📦 [${index + 1}/${cleanupPlan.projects.length}] Processing: ${projectPlan.name}`
+      );
+
       try {
         // Validate production safety
         const productionCount = await validateProductionSafety(projectPlan.deployments);
-        
+
         // Create backup before deletion
         let backupPath = null;
         if (SAFETY_CONFIG.backupEnabled) {
@@ -331,14 +345,18 @@ async function productionSafetyCleanup() {
           batches.push(projectPlan.deployments.slice(i, i + SAFETY_CONFIG.maxBatchSize));
         }
 
-        console.log(`   ⚡ Processing ${batches.length} batch(es) of up to ${SAFETY_CONFIG.maxBatchSize} deployments each`);
+        console.log(
+          `   ⚡ Processing ${batches.length} batch(es) of up to ${SAFETY_CONFIG.maxBatchSize} deployments each`
+        );
 
         let projectSuccess = 0;
         let projectFailed = 0;
 
         for (const [batchIndex, batch] of batches.entries()) {
-          console.log(`   🔄 Batch ${batchIndex + 1}/${batches.length}: ${batch.length} deployment(s)...`);
-          
+          console.log(
+            `   🔄 Batch ${batchIndex + 1}/${batches.length}: ${batch.length} deployment(s)...`
+          );
+
           try {
             const result = await serviceManager.bulkDeleteDeployments(
               'pages',
@@ -354,7 +372,9 @@ async function productionSafetyCleanup() {
             projectSuccess += result.success;
             projectFailed += result.failed;
 
-            console.log(`      ✅ Batch completed: ${result.success} succeeded, ${result.failed} failed`);
+            console.log(
+              `      ✅ Batch completed: ${result.success} succeeded, ${result.failed} failed`
+            );
 
             // Audit log each batch
             await writeAuditLog({
@@ -372,11 +392,10 @@ async function productionSafetyCleanup() {
               console.log(`      ⏱️  Safety delay: 3 seconds...`);
               await new Promise(resolve => setTimeout(resolve, 3000));
             }
-
           } catch (batchError) {
             console.error(`      ❌ Batch ${batchIndex + 1} failed:`, batchError.message);
             projectFailed += batch.length;
-            
+
             await writeAuditLog({
               action: 'batch_failure',
               projectName: projectPlan.name,
@@ -389,8 +408,10 @@ async function productionSafetyCleanup() {
         totalSuccess += projectSuccess;
         totalFailed += projectFailed;
 
-        console.log(`   📊 Project completed: ${projectSuccess} succeeded, ${projectFailed} failed`);
-        
+        console.log(
+          `   📊 Project completed: ${projectSuccess} succeeded, ${projectFailed} failed`
+        );
+
         await writeAuditLog({
           action: 'project_completed',
           projectName: projectPlan.name,
@@ -399,11 +420,10 @@ async function productionSafetyCleanup() {
           failed: projectFailed,
           backupPath
         });
-
       } catch (projectError) {
         console.error(`   ❌ Project processing failed:`, projectError.message);
         totalFailed += projectPlan.deployments.length;
-        
+
         await writeAuditLog({
           action: 'project_failure',
           projectName: projectPlan.name,
@@ -411,7 +431,7 @@ async function productionSafetyCleanup() {
         });
         continue;
       }
-      
+
       console.log(); // Add spacing
     }
 
@@ -421,7 +441,9 @@ async function productionSafetyCleanup() {
     console.log(`   Projects processed: ${cleanupPlan.projects.length}`);
     console.log(`   Deployments successfully deleted: ${totalSuccess}`);
     console.log(`   Failed operations: ${totalFailed}`);
-    console.log(`   Backups created: ${SAFETY_CONFIG.backupEnabled ? cleanupPlan.projects.length : 0}`);
+    console.log(
+      `   Backups created: ${SAFETY_CONFIG.backupEnabled ? cleanupPlan.projects.length : 0}`
+    );
     console.log(`   Audit log: ${SAFETY_CONFIG.auditLogFile}`);
 
     await writeAuditLog({
@@ -433,16 +455,15 @@ async function productionSafetyCleanup() {
         backupsCreated: SAFETY_CONFIG.backupEnabled ? cleanupPlan.projects.length : 0
       }
     });
-
   } catch (error) {
     console.error('❌ Production safety cleanup failed:', error.message);
     logger.error('Production safety cleanup failed', { error: error.message, stack: error.stack });
-    
+
     await writeAuditLog({
       action: 'cleanup_failed',
       error: error.message
     });
-    
+
     process.exit(1);
   } finally {
     rl.close();
@@ -462,12 +483,11 @@ process.on('SIGINT', async () => {
 
 // Execute the cleanup if this script is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  productionSafetyCleanup()
-    .catch(error => {
-      console.error('❌ Unhandled error:', error);
-      rl.close();
-      process.exit(1);
-    });
+  productionSafetyCleanup().catch(error => {
+    console.error('❌ Unhandled error:', error);
+    rl.close();
+    process.exit(1);
+  });
 }
 
 export { productionSafetyCleanup };

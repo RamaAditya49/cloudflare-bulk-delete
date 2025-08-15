@@ -45,9 +45,11 @@ Problem solved! 🎉
 ## Common Error Messages This Tool Fixes
 
 **Cloudflare Dashboard Error:**
+
 > ❌ "Your project has too many deployments to be deleted, follow this guide to delete them: https://cfl.re/3CXesln"
 
 **Our Solution:**
+
 > ✅ `cf-bulk-delete interactive` - Delete hundreds of deployments in seconds
 
 ## Quick Start
@@ -77,20 +79,24 @@ npm install -g cloudflare-bulk-delete
 2. **Find Account ID:** Available in your Cloudflare Dashboard sidebar
 
 3. **Set Environment Variables:**
+
 ```bash
-export CLOUDFLARE_API_TOKEN=your_token_here  
+export CLOUDFLARE_API_TOKEN=your_token_here
 export CLOUDFLARE_ACCOUNT_ID=your_account_id_here
 ```
 
 ## Usage
 
 ### Interactive Mode (Recommended)
+
 ```bash
 cf-bulk-delete interactive
 ```
+
 Choose your resources, select protection level, confirm deletion.
 
 ### Direct Commands
+
 ```bash
 # List all resources
 cf-bulk-delete list
@@ -132,17 +138,20 @@ cf-bulk-delete interactive                   # Interactive mode
 ## Examples
 
 **Emergency cleanup (keeps production safe):**
+
 ```bash
 cf-bulk-delete delete pages my-project --max-age 7 --dry-run
 cf-bulk-delete delete pages my-project --max-age 7
 ```
 
 **Clean only preview deployments:**
+
 ```bash
 cf-bulk-delete delete pages my-project --environment preview --max-age 1
 ```
 
 **Workers version cleanup:**
+
 ```bash
 cf-bulk-delete delete workers my-script --max-age 30
 ```
@@ -158,25 +167,28 @@ const manager = new ServiceManager(apiToken, accountId);
 const deployments = await manager.listDeployments('pages', 'my-project');
 
 // Bulk delete
-const result = await manager.bulkDeleteDeployments(
-  'pages', 'my-project', deployments, 
-  { skipProduction: true, dryRun: false }
-);
+const result = await manager.bulkDeleteDeployments('pages', 'my-project', deployments, {
+  skipProduction: true,
+  dryRun: false
+});
 
 console.log(`Deleted: ${result.success}, Failed: ${result.failed}`);
 ```
 
 ## Troubleshooting
 
-**"Invalid API Token"**  
+**"Invalid API Token"**
+
 - Verify token permissions: `Cloudflare Pages:Edit` and `Workers Scripts:Write`
 - Check token hasn't expired
 
-**"Too Many Requests"**  
+**"Too Many Requests"**
+
 - Tool has built-in rate limiting
 - Reduce batch size: `--batch-size 5`
 
 **Debug mode:**
+
 ```bash
 LOG_LEVEL=debug cf-bulk-delete list
 ```
