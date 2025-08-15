@@ -4,9 +4,15 @@
 
 When Cloudflare shows "Your project has too many deployments to be deleted, follow this guide to delete them", this tool solves it in minutes instead of hours.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-green.svg)
-![npm](https://img.shields.io/npm/v/cloudflare-bulk-delete)
+[![NPM Version](https://img.shields.io/npm/v/cloudflare-bulk-delete?style=flat-square&logo=npm&color=red)](https://www.npmjs.com/package/cloudflare-bulk-delete)
+[![NPM Downloads](https://img.shields.io/npm/dm/cloudflare-bulk-delete?style=flat-square&logo=npm&color=orange)](https://www.npmjs.com/package/cloudflare-bulk-delete)
+[![GitHub Release](https://img.shields.io/github/v/release/RamaAditya49/cloudflare-bulk-delete?style=flat-square&logo=github&color=blue)](https://github.com/RamaAditya49/cloudflare-bulk-delete/releases)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/RamaAditya49/cloudflare-bulk-delete/ci.yml?style=flat-square&logo=github-actions&label=CI)](https://github.com/RamaAditya49/cloudflare-bulk-delete/actions/workflows/ci.yml)
+[![Release Status](https://img.shields.io/github/actions/workflow/status/RamaAditya49/cloudflare-bulk-delete/release.yml?style=flat-square&logo=github-actions&label=Release)](https://github.com/RamaAditya49/cloudflare-bulk-delete/actions/workflows/release.yml)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-green.svg?style=flat-square&logo=node.js)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/RamaAditya49/cloudflare-bulk-delete/blob/main/LICENSE)
+[![GitHub Issues](https://img.shields.io/github/issues/RamaAditya49/cloudflare-bulk-delete?style=flat-square&logo=github)](https://github.com/RamaAditya49/cloudflare-bulk-delete/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/RamaAditya49/cloudflare-bulk-delete?style=flat-square&logo=github)](https://github.com/RamaAditya49/cloudflare-bulk-delete/stargazers)
 
 ## The Problem
 
