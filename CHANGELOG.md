@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/RamaAditya49/cloudflare-bulk-delete/compare/v1.1.0...v1.1.1) (2025-11-20)
+
+
+### Bug Fixes
+
+* resolve npm audit vulnerabilities ([89a6499](https://github.com/RamaAditya49/cloudflare-bulk-delete/commit/89a6499230c12d7c1856128a001191a7491798cf))
+
 # [1.1.0](https://github.com/RamaAditya49/cloudflare-bulk-delete/compare/v1.0.1...v1.1.0) (2025-11-20)
 
 
