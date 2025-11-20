@@ -1,6 +1,6 @@
 {
   "name": "cloudflare-bulk-delete",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Fix Cloudflare 'too many deployments to be deleted' error. Bulk delete Pages and Workers deployments safely.",
   "main": "src/index.js",
   "type": "module",
