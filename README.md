@@ -80,15 +80,58 @@ npm install -g cloudflare-bulk-delete
 
 ## Setup
 
-1. **Get API Token:** [Create token](https://dash.cloudflare.com/profile/api-tokens) with `Cloudflare Pages:Edit` and `Workers Scripts:Write` permissions
+### Step 1: Create API Token
 
-2. **Find Account ID:** Available in your Cloudflare Dashboard sidebar
+1. **Go to Cloudflare API Tokens page:**
+   - Visit [https://dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
+   - Click **"Create Token"**
 
-3. **Set Environment Variables:**
+2. **Configure Token Permissions:**
+   - Choose **"Create Custom Token"**
+   - Set **Token name**: e.g., "Cloudflare Bulk Delete"
+   - Add the following permissions:
+     - **Account** → **Cloudflare Pages** → **Edit**
+     - **Account** → **Workers Scripts** → **Edit**
+   - Under **Account Resources**, select the specific account or "All accounts"
+   - Click **"Continue to summary"** → **"Create Token"**
+
+3. **Save Your Token:**
+   - ⚠️ **Important**: Copy the token immediately - it won't be shown again!
+   - Store it securely
+
+### Step 2: Find Your Account ID
+
+1. **From Cloudflare Dashboard:**
+   - Go to [https://dash.cloudflare.com](https://dash.cloudflare.com)
+   - Select any website/domain
+   - Scroll down the right sidebar
+   - Find **"Account ID"** under the API section
+   - Click to copy
+
+### Step 3: Set Environment Variables
+
+**Option A: Export in Terminal (Temporary)**
 
 ```bash
 export CLOUDFLARE_API_TOKEN=your_token_here
 export CLOUDFLARE_ACCOUNT_ID=your_account_id_here
+```
+
+**Option B: Create `.env` File (Recommended)**
+
+```bash
+# Create .env file in your project directory
+echo "CLOUDFLARE_API_TOKEN=your_token_here" > .env
+echo "CLOUDFLARE_ACCOUNT_ID=your_account_id_here" >> .env
+```
+
+**Option C: Add to Shell Profile (Permanent)**
+
+```bash
+# Add to ~/.bashrc, ~/.zshrc, or equivalent
+echo 'export CLOUDFLARE_API_TOKEN=your_token_here' >> ~/.bashrc
+echo 'export CLOUDFLARE_ACCOUNT_ID=your_account_id_here' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ## Usage
@@ -139,6 +182,8 @@ cf-bulk-delete interactive                   # Interactive mode
 --environment <env>    # Target specific environment
 --skip-production      # Skip production (default: true)
 --batch-size <n>       # Process in batches (default: 10)
+--force                # Force delete aliased deployments (default: true)
+--no-force             # Disable force mode for aliased deployments
 ```
 
 ## Examples
@@ -185,13 +230,33 @@ console.log(`Deleted: ${result.success}, Failed: ${result.failed}`);
 
 **"Invalid API Token"**
 
-- Verify token permissions: `Cloudflare Pages:Edit` and `Workers Scripts:Write`
+- Verify token permissions include:
+  - `Cloudflare Pages:Edit`
+  - `Workers Scripts:Write`
 - Check token hasn't expired
+- Ensure token is for the correct account
+- Try regenerating the token
+
+**"Cannot delete an aliased deployment"**
+
+```
+Error: You cannot delete an aliased deployment without a `?force=true` parameter
+```
+
+- **Solution**: This is automatically handled! The tool uses `force=true` by default
+- If you want to preserve aliased deployments, use `--no-force` flag
+- Aliased deployments are special deployments linked to custom domains or branch aliases
 
 **"Too Many Requests"**
 
 - Tool has built-in rate limiting
 - Reduce batch size: `--batch-size 5`
+
+**"Account ID not found"**
+
+- Double-check your Account ID from Cloudflare Dashboard
+- Ensure you're using Account ID, not Zone ID
+- Account ID format: 32-character hexadecimal string
 
 **Debug mode:**
 

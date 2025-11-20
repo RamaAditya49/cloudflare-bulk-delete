@@ -343,6 +343,108 @@ When submitting a PR, include:
 - **Regular Merge**: For well-organized commit history
 - **Delete Branch**: After successful merge
 
+## Commit Message Guidelines
+
+### Conventional Commits
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation. All commits must follow this format:
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Commit Types
+
+- **feat**: New feature (triggers MINOR version bump)
+- **fix**: Bug fix (triggers PATCH version bump)
+- **docs**: Documentation changes only
+- **style**: Code style changes (formatting, missing semicolons, etc.)
+- **refactor**: Code refactoring without feature changes
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **chore**: Maintenance tasks, dependency updates
+- **ci**: CI/CD configuration changes
+- **build**: Build system changes
+- **revert**: Reverting a previous commit
+
+### Breaking Changes
+
+For breaking changes, add `BREAKING CHANGE:` in the footer or `!` after the type:
+
+```bash
+feat!: remove support for Node 14
+
+BREAKING CHANGE: Node 14 is no longer supported. Minimum version is now Node 16.
+```
+
+This triggers a MAJOR version bump.
+
+### Commit Examples
+
+```bash
+# Feature addition (1.0.0 → 1.1.0)
+feat: add force parameter for aliased deployments
+
+# Bug fix (1.0.0 → 1.0.1)
+fix: resolve token validation error
+
+# Documentation update (no version bump)
+docs: update README with detailed setup guide
+
+# Breaking change (1.0.0 → 2.0.0)
+feat!: change API response format
+
+BREAKING CHANGE: API now returns { data, meta } instead of flat response
+
+# With scope
+feat(pages): add deployment filtering by environment
+fix(cli): correct help text for --force flag
+```
+
+### Commit Message Template
+
+A commit message template is configured automatically. When you commit, you'll see:
+
+```bash
+git commit
+# Opens editor with template:
+# <type>(<scope>): <subject>
+# |<----  Using a Maximum Of 50 Characters  ---->|
+# ...
+```
+
+### Automated Releases
+
+When you push to `main`:
+
+1. **semantic-release** analyzes commit messages
+2. **Version** is automatically bumped based on commit types
+3. **CHANGELOG.md** is updated automatically
+4. **GitHub release** is created with release notes
+5. **npm package** is published automatically
+
+**No manual version bumping required!**
+
+### Commit Validation
+
+Commits are validated using commitlint:
+
+```bash
+# ✅ Valid commits
+git commit -m "feat: add new feature"
+git commit -m "fix: resolve bug"
+git commit -m "docs: update README"
+
+# ❌ Invalid commits (will be rejected)
+git commit -m "Added new feature"  # Missing type
+git commit -m "FIX: bug"           # Type must be lowercase
+git commit -m "feat: Fix."         # Subject ends with period
+```
+
 ## Issue Reporting
 
 ### Bug Reports
@@ -434,50 +536,49 @@ Keep the main README.md current with:
 
 ## Release Process
 
+### Automated Releases with semantic-release
+
+This project uses **semantic-release** for fully automated releases. You don't need to manually bump versions or create releases.
+
+### How It Works
+
+1. **Commit with Conventional Format**: Use conventional commit messages
+2. **Push to Main**: Merge your PR to main branch
+3. **Automatic Release**: semantic-release handles everything:
+   - Analyzes commits since last release
+   - Determines next version number
+   - Updates `package.json` and `package-lock.json`
+   - Generates/updates `CHANGELOG.md`
+   - Creates GitHub release with notes
+   - Publishes to npm
+   - Creates git tag
+
 ### Version Numbering
 
 We follow [Semantic Versioning](https://semver.org/):
 
-- **MAJOR**: Breaking changes
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes (backward compatible)
+- **MAJOR** (1.0.0 → 2.0.0): Breaking changes (`feat!:` or `BREAKING CHANGE:`)
+- **MINOR** (1.0.0 → 1.1.0): New features (`feat:`)
+- **PATCH** (1.0.0 → 1.0.1): Bug fixes (`fix:`)
 
-### Release Steps
+### Manual Release (Emergency Only)
 
-1. **Version Bump**:
+If automated release fails, maintainers can manually release:
 
-   ```bash
-   npm version patch|minor|major
-   ```
+```bash
+# Run semantic-release locally
+npx semantic-release --no-ci
+```
 
-2. **Update Documentation**:
-   - Update CHANGELOG.md
-   - Update README.md if needed
-   - Review and update examples
+### Release Checklist
 
-3. **Testing**:
+Before merging to main:
 
-   ```bash
-   npm run test:ci
-   npm run build
-   ```
-
-4. **Release**:
-   ```bash
-   npm publish
-   git push origin main --tags
-   ```
-
-### Changelog Maintenance
-
-Keep CHANGELOG.md updated with:
-
-- **Added**: New features
-- **Changed**: Changes in existing functionality
-- **Deprecated**: Soon-to-be removed features
-- **Removed**: Removed features
-- **Fixed**: Bug fixes
-- **Security**: Vulnerability fixes
+- [ ] All tests pass (`npm test`)
+- [ ] Linting passes (`npm run lint`)
+- [ ] Commit messages follow conventional format
+- [ ] Documentation updated if needed
+- [ ] Breaking changes clearly documented
 
 ## Community Guidelines
 

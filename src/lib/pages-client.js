@@ -135,7 +135,7 @@ export class PagesClient extends CloudflareClient {
           );
           logger.warn(
             `⚠️  API limitation: Only ${allDeployments.length} of ${resultInfo.total_count} total deployments are accessible. ` +
-              'This is a known Cloudflare Pages API limitation.'
+            'This is a known Cloudflare Pages API limitation.'
           );
         } else if (resultInfo && resultInfo.total_count) {
           logger.info(
@@ -192,13 +192,27 @@ export class PagesClient extends CloudflareClient {
 
   /**
    * Delete single deployment
+   * @param {string} projectName - Name of the Pages project
+   * @param {string} deploymentId - ID of the deployment to delete
+   * @param {object} options - Deletion options
+   * @param {boolean} options.force - Force delete aliased deployments (default: true)
    */
-  async deleteDeployment(projectName, deploymentId) {
+  async deleteDeployment(projectName, deploymentId, options = {}) {
+    const { force = true } = options;
+
     try {
-      logger.debug(`Deleting deployment ${deploymentId} from project ${projectName}...`);
+      logger.debug(
+        `Deleting deployment ${deploymentId} from project ${projectName}${force ? ' (force mode)' : ''}...`
+      );
+
+      const params = {};
+      if (force) {
+        params.force = true;
+      }
 
       const response = await this.delete(
-        `/accounts/${this.accountId}/pages/projects/${projectName}/deployments/${deploymentId}`
+        `/accounts/${this.accountId}/pages/projects/${projectName}/deployments/${deploymentId}`,
+        params
       );
 
       if (response.success) {
@@ -217,7 +231,7 @@ export class PagesClient extends CloudflareClient {
    * Bulk delete deployments for specific project
    */
   async bulkDeleteDeployments(projectName, deployments, options = {}) {
-    const { skipProduction = true, dryRun = false, keepLatest = 1 } = options;
+    const { skipProduction = true, dryRun = false, keepLatest = 1, force = true } = options;
 
     if (!Array.isArray(deployments) || deployments.length === 0) {
       logger.warn('No deployments to delete');
@@ -304,7 +318,7 @@ export class PagesClient extends CloudflareClient {
     // Process deployments with rate limiting
     for (const deployment of deploymentsToDelete) {
       try {
-        await this.deleteDeployment(projectName, deployment.id);
+        await this.deleteDeployment(projectName, deployment.id, { force });
         successCount++;
         progressLogger.increment(deployment.id);
       } catch (error) {

@@ -114,10 +114,10 @@ export class CloudflareClient {
   /**
    * Generic DELETE request with error handling and rate limiting
    */
-  async delete(endpoint) {
+  async delete(endpoint, params = {}) {
     return this.makeRequest(async () => {
-      logger.debug(`DELETE ${endpoint}`);
-      const response = await this.httpClient.delete(endpoint);
+      logger.debug(`DELETE ${endpoint}`, params);
+      const response = await this.httpClient.delete(endpoint, { params });
       return response.data;
     });
   }

@@ -164,7 +164,7 @@ describe('PagesClient', () => {
   });
 
   describe('deleteDeployment', () => {
-    test('should delete deployment successfully', async () => {
+    test('should delete deployment successfully with force=true by default', async () => {
       const mockResponse = { data: { success: true } };
       mockAxiosInstance.delete.mockResolvedValue(mockResponse);
 
@@ -172,7 +172,38 @@ describe('PagesClient', () => {
 
       expect(result).toBe(true);
       expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
-        `/accounts/${mockAccountId}/pages/projects/test-project/deployments/deploy-id`
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments/deploy-id`,
+        { params: { force: true } }
+      );
+    });
+
+    test('should delete deployment with force=true explicitly', async () => {
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.delete.mockResolvedValue(mockResponse);
+
+      const result = await pagesClient.deleteDeployment('test-project', 'deploy-id', {
+        force: true
+      });
+
+      expect(result).toBe(true);
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments/deploy-id`,
+        { params: { force: true } }
+      );
+    });
+
+    test('should delete deployment without force parameter when force=false', async () => {
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.delete.mockResolvedValue(mockResponse);
+
+      const result = await pagesClient.deleteDeployment('test-project', 'deploy-id', {
+        force: false
+      });
+
+      expect(result).toBe(true);
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments/deploy-id`,
+        { params: {} }
       );
     });
   });
@@ -218,7 +249,7 @@ describe('PagesClient', () => {
       const projectResponse = { data: { success: true, result: { name: 'test-project' } } };
       // Mock delete call
       const deleteResponse = { data: { success: true } };
-      
+
       mockAxiosInstance.get.mockResolvedValueOnce(projectResponse);
       mockAxiosInstance.delete.mockResolvedValueOnce(deleteResponse);
 
@@ -226,7 +257,8 @@ describe('PagesClient', () => {
 
       expect(result.success).toBe(true);
       expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
-        `/accounts/${mockAccountId}/pages/projects/test-project`
+        `/accounts/${mockAccountId}/pages/projects/test-project`,
+        { params: {} }
       );
     });
 

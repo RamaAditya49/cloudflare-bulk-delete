@@ -127,7 +127,7 @@ describe('WorkersClient', () => {
     test('should fetch all deployments for script', async () => {
       // Mock the first call to deployments endpoint (will fail)
       mockAxiosInstance.get.mockRejectedValueOnce(new Error('Deployments endpoint not available'));
-      
+
       // Mock the fallback call to versions endpoint
       const mockResponse = {
         data: {
@@ -161,7 +161,8 @@ describe('WorkersClient', () => {
 
       expect(result).toBe(true);
       expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
-        `/accounts/${mockAccountId}/workers/scripts/test-script/deployments/version-id`
+        `/accounts/${mockAccountId}/workers/scripts/test-script/deployments/version-id`,
+        { params: {} }
       );
     });
 
@@ -217,7 +218,7 @@ describe('WorkersClient', () => {
       const scriptResponse = { data: { success: true, result: { script: 'test-script' } } };
       // Mock delete call
       const deleteResponse = { data: { success: true } };
-      
+
       mockAxiosInstance.get.mockResolvedValueOnce(scriptResponse);
       mockAxiosInstance.delete.mockResolvedValueOnce(deleteResponse);
 
@@ -225,7 +226,8 @@ describe('WorkersClient', () => {
 
       expect(result.success).toBe(true);
       expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
-        `/accounts/${mockAccountId}/workers/scripts/test-script`
+        `/accounts/${mockAccountId}/workers/scripts/test-script`,
+        { params: {} }
       );
     });
 
