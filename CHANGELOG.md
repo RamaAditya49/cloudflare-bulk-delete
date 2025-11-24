@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/RamaAditya49/cloudflare-bulk-delete/compare/v1.1.1...v1.2.0) (2025-11-24)
+
+
+### Features
+
+* add GitHub Actions CI workflow and remove @semantic-release/npm dependency ([52c7a9a](https://github.com/RamaAditya49/cloudflare-bulk-delete/commit/52c7a9abad2bfd654ab0a418bea089f2d07a9c63))
+
 ## [1.1.1](https://github.com/RamaAditya49/cloudflare-bulk-delete/compare/v1.1.0...v1.1.1) (2025-11-20)
 
 
