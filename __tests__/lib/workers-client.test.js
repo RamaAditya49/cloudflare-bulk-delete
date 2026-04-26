@@ -150,6 +150,27 @@ describe('WorkersClient', () => {
         { params: { page: 1, per_page: 100 } }
       );
     });
+
+    test('should handle Workers versions responses with items array', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Deployments endpoint not available'));
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          result: {
+            items: [{ id: 'version1', number: '1', created_on: '2023-01-01T00:00:00Z' }]
+          }
+        }
+      });
+
+      const result = await workersClient.listAllDeployments('test-script');
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'version1',
+          version: '1'
+        })
+      ]);
+    });
   });
 
   describe('deleteDeployment', () => {
@@ -199,9 +220,7 @@ describe('WorkersClient', () => {
     });
 
     test('should handle dry run mode', async () => {
-      const deployments = [
-        { id: 'version1', version: '1', created_on: '2023-01-01T00:00:00Z' }
-      ];
+      const deployments = [{ id: 'version1', version: '1', created_on: '2023-01-01T00:00:00Z' }];
 
       const result = await workersClient.bulkDeleteDeployments('test-script', deployments, {
         dryRun: true
@@ -209,6 +228,24 @@ describe('WorkersClient', () => {
 
       expect(result.dryRun).toBe(true);
       expect(mockAxiosInstance.delete).not.toHaveBeenCalled();
+    });
+
+    test('should keep the first Worker deployment when skipLatest is enabled', async () => {
+      const deployments = [
+        { id: 'latest-from-api', version: '2', created_on: '2023-01-01T00:00:00Z' },
+        { id: 'older-from-api', version: '1', created_on: '2023-01-02T00:00:00Z' }
+      ];
+
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.delete.mockResolvedValue(mockResponse);
+
+      const result = await workersClient.bulkDeleteDeployments('test-script', deployments);
+
+      expect(result.success).toBe(1);
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/workers/scripts/test-script/deployments/older-from-api`,
+        { params: {} }
+      );
     });
   });
 
@@ -242,11 +279,7 @@ describe('WorkersClient', () => {
 
   describe('getDeploymentStats', () => {
     test('should calculate deployment statistics', async () => {
-      const mockDeployments = [
-        { version: '1.0.0' },
-        { version: '1.0.1' },
-        { version: '2.0.0' }
-      ];
+      const mockDeployments = [{ version: '1.0.0' }, { version: '1.0.1' }, { version: '2.0.0' }];
 
       const mockResponse = {
         data: {

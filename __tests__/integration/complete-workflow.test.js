@@ -72,7 +72,7 @@ jest.unstable_mockModule('dayjs', () => ({
 
 // Mock pLimit
 jest.unstable_mockModule('p-limit', () => ({
-  default: jest.fn(() => (fn) => fn())
+  default: jest.fn(() => fn => fn())
 }));
 
 // Import after mocking
@@ -269,7 +269,9 @@ describe('Integration Tests - Complete Workflows', () => {
       mockAxiosInstance.get.mockRejectedValueOnce(new Error('API Error'));
 
       // This should throw the error since ServiceManager doesn't catch it
-      await expect(serviceManager.listDeployments('pages', 'test-project')).rejects.toThrow('API Error');
+      await expect(serviceManager.listDeployments('pages', 'test-project')).rejects.toThrow(
+        'API Error'
+      );
     });
   });
 });

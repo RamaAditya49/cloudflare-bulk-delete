@@ -98,8 +98,34 @@ describe('PagesClient', () => {
       expect(result).toEqual(mockResponse.data.result);
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         `/accounts/${mockAccountId}/pages/projects`,
-        { params: {} }
+        { params: { page: 1, per_page: 100 } }
       );
+    });
+
+    test('should paginate through all projects', async () => {
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({
+          data: {
+            success: true,
+            result: [{ name: 'project1', id: '1' }],
+            result_info: { page: 1, total_pages: 2, total_count: 2 }
+          }
+        })
+        .mockResolvedValueOnce({
+          data: {
+            success: true,
+            result: [{ name: 'project2', id: '2' }],
+            result_info: { page: 2, total_pages: 2, total_count: 2 }
+          }
+        });
+
+      const result = await pagesClient.listProjects();
+
+      expect(result).toEqual([
+        { name: 'project1', id: '1' },
+        { name: 'project2', id: '2' }
+      ]);
+      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -141,7 +167,41 @@ describe('PagesClient', () => {
       expect(result).toEqual(mockResponse.data.result);
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         `/accounts/${mockAccountId}/pages/projects/test-project/deployments`,
-        { params: {} }
+        { params: { page: 1, per_page: 100 } }
+      );
+    });
+
+    test('should paginate through all deployments for project', async () => {
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({
+          data: {
+            success: true,
+            result: [{ id: 'deploy1', environment: 'preview', created_on: '2023-01-01T00:00:00Z' }],
+            result_info: { page: 1, total_pages: 2, total_count: 2 }
+          }
+        })
+        .mockResolvedValueOnce({
+          data: {
+            success: true,
+            result: [
+              { id: 'deploy2', environment: 'production', created_on: '2023-01-02T00:00:00Z' }
+            ],
+            result_info: { page: 2, total_pages: 2, total_count: 2 }
+          }
+        });
+
+      const result = await pagesClient.listAllDeployments('test-project');
+
+      expect(result).toHaveLength(2);
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(
+        1,
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments`,
+        { params: { page: 1, per_page: 100 } }
+      );
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(
+        2,
+        `/accounts/${mockAccountId}/pages/projects/test-project/deployments`,
+        { params: { page: 2, per_page: 100 } }
       );
     });
 
@@ -158,7 +218,7 @@ describe('PagesClient', () => {
 
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         `/accounts/${mockAccountId}/pages/projects/test-project/deployments`,
-        { params: { env: 'preview' } }
+        { params: { page: 1, per_page: 100, env: 'preview' } }
       );
     });
   });
@@ -240,6 +300,45 @@ describe('PagesClient', () => {
 
       expect(result.dryRun).toBe(true);
       expect(mockAxiosInstance.delete).not.toHaveBeenCalled();
+    });
+
+    test('should suggest the supported CLI option when deployments are protected', async () => {
+      const deployments = [
+        { id: 'deploy1', environment: 'preview', created_on: '2023-01-02T00:00:00Z' },
+        { id: 'deploy2', environment: 'production', created_on: '2023-01-01T00:00:00Z' }
+      ];
+
+      await pagesClient.bulkDeleteDeployments('test-project', deployments, {
+        dryRun: true,
+        keepLatest: 1
+      });
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        '💡 To include protected deployments, use --skip-production false to include production deployments; use --keep-latest 0 to include latest deployments'
+      );
+      expect(mockLogger.info).not.toHaveBeenCalledWith(
+        '💡 To delete production deployments, use --no-skip-production or set --keep-latest=0'
+      );
+    });
+
+    test('should protect both latest and production deployments by default', async () => {
+      const deployments = [
+        { id: 'latest-preview', environment: 'preview', created_on: '2023-01-03T00:00:00Z' },
+        { id: 'old-production', environment: 'production', created_on: '2023-01-02T00:00:00Z' },
+        { id: 'old-preview', environment: 'preview', created_on: '2023-01-01T00:00:00Z' }
+      ];
+
+      const result = await pagesClient.bulkDeleteDeployments('test-project', deployments, {
+        dryRun: true
+      });
+
+      expect(result.skipped).toBe(2);
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        '[DRY RUN] 1. old-preview (preview) - 2023-01-01T00:00:00Z'
+      );
+      expect(mockLogger.info).not.toHaveBeenCalledWith(
+        expect.stringContaining('old-production (production)')
+      );
     });
   });
 

@@ -82,7 +82,7 @@ export class WorkersClient extends CloudflareClient {
       }
     } catch (error) {
       // If deployments endpoint is not available, try script versions
-      logger.debug('Deployment endpoint not available, trying script versions...');
+      logger.debug(`Deployment endpoint not available, trying script versions: ${error.message}`);
       return await this.listScriptVersions(scriptName, options);
     }
   }
@@ -107,8 +107,12 @@ export class WorkersClient extends CloudflareClient {
       );
 
       if (response.success) {
+        const versions = Array.isArray(response.result)
+          ? response.result
+          : response.result?.items || [];
+
         // Transform versions to look like deployments for consistency
-        const transformedVersions = response.result.map(version => ({
+        const transformedVersions = versions.map(version => ({
           id: version.id,
           created_on: version.created_on,
           modified_on: version.modified_on,
@@ -170,10 +174,10 @@ export class WorkersClient extends CloudflareClient {
       if (maxAge) {
         const cutoffDate = dayjs().subtract(maxAge, 'day');
         filteredDeployments = filteredDeployments.filter(deployment => {
-          return dayjs(deployment.created_on).isAfter(cutoffDate);
+          return dayjs(deployment.created_on).isBefore(cutoffDate);
         });
         logger.info(
-          `Age-based filter: ${filteredDeployments.length} deployments newer than ${maxAge} days`
+          `Age-based filter: ${filteredDeployments.length} deployments older than ${maxAge} days`
         );
       }
 
@@ -192,19 +196,9 @@ export class WorkersClient extends CloudflareClient {
     try {
       logger.debug(`Deleting deployment ${deploymentId} from Worker ${scriptName}...`);
 
-      // Try deployment-specific deletion first
-      let response;
-      try {
-        response = await this.delete(
-          `/accounts/${this.accountId}/workers/scripts/${scriptName}/deployments/${deploymentId}`
-        );
-      } catch (error) {
-        // Fall back to version deletion
-        logger.debug('Trying to delete as version...');
-        response = await this.delete(
-          `/accounts/${this.accountId}/workers/scripts/${scriptName}/versions/${deploymentId}`
-        );
-      }
+      const response = await this.delete(
+        `/accounts/${this.accountId}/workers/scripts/${scriptName}/deployments/${deploymentId}`
+      );
 
       if (response.success) {
         logger.debug(`Deployment ${deploymentId} successfully deleted`);
@@ -271,15 +265,10 @@ export class WorkersClient extends CloudflareClient {
     let skippedCount = 0;
 
     if (skipLatest && deployments.length > 0) {
-      // Sort by created date and skip the latest one
-      const sorted = [...deployments].sort(
-        (a, b) => dayjs(b.created_on).valueOf() - dayjs(a.created_on).valueOf()
-      );
-
-      deploymentsToDelete = sorted.slice(1); // Skip first (latest)
+      deploymentsToDelete = deployments.slice(1);
       skippedCount = 1;
 
-      logger.debug(`Skipping latest deployment: ${sorted[0].id}`);
+      logger.debug(`Skipping latest deployment: ${deployments[0].id}`);
     }
 
     if (dryRun) {

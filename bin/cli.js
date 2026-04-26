@@ -7,6 +7,10 @@ import ora from 'ora';
 import { ServiceManager } from '../src/lib/service-manager.js';
 import { logger } from '../src/utils/logger.js';
 import { config } from '../src/config/config.js';
+import {
+  CLOUDFLARE_API_TOKEN_TEMPLATE_URL,
+  REQUIRED_TOKEN_PERMISSIONS
+} from '../src/config/cloudflare-token-template.js';
 import dayjs from 'dayjs';
 
 // Package info
@@ -15,6 +19,49 @@ program
   .name('cf-bulk-delete')
   .description('Tool for bulk deleting Cloudflare Pages and Workers deployments')
   .version('1.0.0');
+
+function parseBooleanOption(value) {
+  if (value === undefined || value === true) {
+    return true;
+  }
+
+  if (value === false) {
+    return false;
+  }
+
+  const normalizedValue = String(value).toLowerCase().trim();
+  if (['true', '1', 'yes', 'y', 'on'].includes(normalizedValue)) {
+    return true;
+  }
+
+  if (['false', '0', 'no', 'n', 'off'].includes(normalizedValue)) {
+    return false;
+  }
+
+  throw new Error(`Invalid boolean value "${value}". Use true or false.`);
+}
+
+function parseNonNegativeIntegerOption(value) {
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsedValue) || parsedValue < 0) {
+    throw new Error(`Invalid count "${value}". Use a non-negative integer.`);
+  }
+
+  return parsedValue;
+}
+
+function printTokenSetupHelp() {
+  console.log(chalk.yellow('\nCreate a Cloudflare API token with these permissions:'));
+  REQUIRED_TOKEN_PERMISSIONS.forEach(permission => {
+    console.log(chalk.yellow(`- ${permission.label}`));
+  });
+  console.log(chalk.gray('Cloudflare Dashboard may display Write permissions as Edit.'));
+  console.log(chalk.cyan(`\nToken template: ${CLOUDFLARE_API_TOKEN_TEMPLATE_URL}`));
+  console.log(
+    chalk.gray('After creating the token, set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.')
+  );
+}
 
 // Global options
 program
@@ -68,6 +115,7 @@ async function setupServiceManager(options) {
   if (!apiToken) {
     console.error(chalk.red('Error: Cloudflare API Token is required'));
     console.log(chalk.yellow('Use --token flag or set CLOUDFLARE_API_TOKEN environment variable'));
+    printTokenSetupHelp();
     process.exit(1);
   }
 
@@ -76,6 +124,7 @@ async function setupServiceManager(options) {
     console.log(
       chalk.yellow('Use --account flag or set CLOUDFLARE_ACCOUNT_ID environment variable')
     );
+    printTokenSetupHelp();
     process.exit(1);
   }
 
@@ -93,6 +142,7 @@ async function setupServiceManager(options) {
     if (!validation.overall) {
       spinner.fail('API validation failed');
       console.error(chalk.red('Check your API Token and Account ID'));
+      printTokenSetupHelp();
       process.exit(1);
     }
 
@@ -101,9 +151,17 @@ async function setupServiceManager(options) {
   } catch (error) {
     spinner.fail('Failed to validate API connections');
     console.error(chalk.red(error.message));
+    printTokenSetupHelp();
     process.exit(1);
   }
 }
+
+program
+  .command('token-template')
+  .description('Print a Cloudflare API token template link with the required permissions')
+  .action(() => {
+    printTokenSetupHelp();
+  });
 
 /**
  * Command: List resources
@@ -245,8 +303,23 @@ program
   .option('-e, --environment <env>', 'Filter by environment (for Pages)')
   .option('--max-age <days>', 'Delete deployments older than X days', parseInt)
   .option('--status <status>', 'Filter by deployment status')
-  .option('--skip-production', 'Skip production deployments (default for Pages)')
-  .option('--skip-latest', 'Skip latest deployment (default for Workers)')
+  .option(
+    '--skip-production [value]',
+    'Skip production deployments (default for Pages). Use false to include production deployments.',
+    parseBooleanOption
+  )
+  .option(
+    '--skip-latest [value]',
+    'Skip latest deployment (default for Workers). Use false to include latest deployment.',
+    parseBooleanOption
+  )
+  .option(
+    '--keep-latest <count>',
+    'Keep the newest N Pages deployments protected (default: 1)',
+    parseNonNegativeIntegerOption
+  )
+  .option('--force', 'Force delete aliased Pages deployments (default)')
+  .option('--no-force', 'Disable force mode for aliased Pages deployments')
   .option('--batch-size <size>', 'Number of deployments per batch', parseInt)
   .option('-y, --yes', 'Skip confirmation prompt')
   .action(async (type, name, options) => {
@@ -332,6 +405,8 @@ program
         dryRun: isDryRun,
         skipProduction: options.skipProduction !== false && type === 'pages',
         skipLatest: options.skipLatest !== false && type === 'workers',
+        keepLatest: options.keepLatest,
+        force: options.force !== false,
         batchSize: options.batchSize
       };
 

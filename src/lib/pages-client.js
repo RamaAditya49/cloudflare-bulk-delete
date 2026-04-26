@@ -15,18 +15,37 @@ export class PagesClient extends CloudflareClient {
   /**
    * List all Pages projects in account
    */
-  async listProjects() {
+  async listProjects(options = {}) {
     try {
+      const { perPage = 100 } = options;
       logger.info('Fetching list of Cloudflare Pages projects...');
 
-      const response = await this.get(`/accounts/${this.accountId}/pages/projects`);
+      let projects = [];
+      let page = 1;
+      let hasMore = true;
 
-      if (response.success) {
-        logger.info(`Found ${response.result.length} Pages projects`);
-        return response.result;
-      } else {
-        throw new Error('Failed to fetch Pages projects');
+      while (hasMore) {
+        const response = await this.get(`/accounts/${this.accountId}/pages/projects`, {
+          page,
+          per_page: perPage
+        });
+
+        if (!response.success) {
+          throw new Error('Failed to fetch Pages projects');
+        }
+
+        const currentProjects = response.result || [];
+        projects = projects.concat(currentProjects);
+
+        const resultInfo = response.result_info || {};
+        hasMore = resultInfo.total_pages
+          ? page < resultInfo.total_pages
+          : currentProjects.length === perPage;
+        page++;
       }
+
+      logger.info(`Found ${projects.length} Pages projects`);
+      return projects;
     } catch (error) {
       logger.error('Failed to fetch Pages projects list:', error.message);
       throw error;
@@ -56,20 +75,18 @@ export class PagesClient extends CloudflareClient {
    */
   async listDeployments(projectName, options = {}) {
     try {
-      const { environment = null, limit = null } = options;
+      const { environment = null, page = 1, perPage = 100 } = options;
 
-      logger.info(`Fetching deployments for project ${projectName}...`);
+      logger.info(`Fetching deployments for project ${projectName} (page ${page})...`);
 
-      const params = {};
+      const params = {
+        page,
+        per_page: perPage
+      };
 
       // Some APIs use 'env' for environment filter
       if (environment) {
         params.env = environment;
-      }
-
-      // Try with limit parameter instead of per_page
-      if (limit) {
-        params.limit = limit;
       }
 
       const response = await this.get(
@@ -92,7 +109,7 @@ export class PagesClient extends CloudflareClient {
   }
 
   /**
-   * List ALL deployments for specific project (Pages API doesn't support standard pagination)
+   * List ALL deployments for specific project
    */
   async listAllDeployments(projectName, options = {}) {
     try {
@@ -100,53 +117,39 @@ export class PagesClient extends CloudflareClient {
 
       logger.info(`Fetching all deployments for project ${projectName}...`);
 
-      // Pages API doesn't support page/per_page parameters
-      // We need to use the basic endpoint and get all available results
-      const params = {};
-
-      if (environment) {
-        params.env = environment;
-      }
-
-      logger.debug('Fetching deployments without pagination parameters...');
-
-      const response = await this.get(
-        `/accounts/${this.accountId}/pages/projects/${projectName}/deployments`,
-        params
-      );
-
       let allDeployments = [];
       let totalCount = null;
+      let page = 1;
+      let hasMore = true;
+      const perPage = 100;
 
-      if (response.success && response.result) {
-        allDeployments = response.result;
+      while (hasMore) {
+        const result = await this.listDeployments(projectName, {
+          environment,
+          page,
+          perPage
+        });
+        const deployments = result.deployments || [];
+        const pagination = result.pagination || {};
 
-        // Check if there might be more deployments than what we got
-        const resultInfo = response.result_info;
-        totalCount = resultInfo?.total_count;
+        allDeployments = allDeployments.concat(deployments);
+        totalCount = pagination.total_count || totalCount;
+        hasMore = pagination.total_pages
+          ? page < pagination.total_pages
+          : deployments.length === perPage;
+        page++;
 
-        if (
-          resultInfo &&
-          resultInfo.total_count &&
-          resultInfo.total_count > allDeployments.length
-        ) {
-          logger.info(
-            `Retrieved ${allDeployments.length}/${resultInfo.total_count} deployments from API`
-          );
-          logger.warn(
-            `⚠️  API limitation: Only ${allDeployments.length} of ${resultInfo.total_count} total deployments are accessible. ` +
-            'This is a known Cloudflare Pages API limitation.'
-          );
-        } else if (resultInfo && resultInfo.total_count) {
-          logger.info(
-            `Retrieved ${allDeployments.length}/${resultInfo.total_count} deployments from API`
-          );
-        } else {
-          logger.info(`Retrieved ${allDeployments.length} deployments from API`);
+        if (page > 1000) {
+          logger.warn('Reached maximum 1000 pages limit, stopping...');
+          break;
         }
-      } else {
-        logger.warn('Failed to fetch deployments or received empty result');
       }
+
+      logger.info(
+        totalCount
+          ? `Retrieved ${allDeployments.length}/${totalCount} deployments from API`
+          : `Retrieved ${allDeployments.length} deployments from API`
+      );
 
       // Apply additional filters
       let filteredDeployments = allDeployments;
@@ -154,10 +157,10 @@ export class PagesClient extends CloudflareClient {
       if (maxAge) {
         const cutoffDate = dayjs().subtract(maxAge, 'day');
         filteredDeployments = filteredDeployments.filter(deployment => {
-          return dayjs(deployment.created_on).isAfter(cutoffDate);
+          return dayjs(deployment.created_on).isBefore(cutoffDate);
         });
         logger.info(
-          `Age-based filter: ${filteredDeployments.length} deployments newer than ${maxAge} days`
+          `Age-based filter: ${filteredDeployments.length} deployments older than ${maxAge} days`
         );
       }
 
@@ -244,49 +247,50 @@ export class PagesClient extends CloudflareClient {
     );
 
     // Filter deployments based on protection settings
-    let deploymentsToDelete = sortedDeployments;
     let skippedCount = 0;
 
-    if (skipProduction) {
-      // If skipProduction is true but most deployments are production,
-      // provide more granular control by protecting only the latest N deployments
-      if (keepLatest > 0) {
-        logger.info(`Production protection: Keeping latest ${keepLatest} deployments safe`);
-
-        deploymentsToDelete = sortedDeployments.filter((deployment, index) => {
-          // Always skip the latest N deployments for safety
-          if (index < keepLatest) {
-            skippedCount++;
-            logger.debug(
-              `Skipping latest deployment #${index + 1}: ${deployment.id} (${deployment.environment}) - ${deployment.created_on}`
-            );
-            return false;
-          }
-          return true;
-        });
-      } else {
-        // Original logic: skip all production deployments
-        deploymentsToDelete = sortedDeployments.filter(deployment => {
-          const isProduction = deployment.environment === 'production';
-
-          if (isProduction) {
-            skippedCount++;
-            logger.debug(
-              `Skipping production deployment: ${deployment.id} (environment: ${deployment.environment})`
-            );
-            return false;
-          }
-          return true;
-        });
-      }
+    if (keepLatest > 0) {
+      logger.info(`Latest deployment protection: Keeping latest ${keepLatest} deployments safe`);
     }
+
+    if (skipProduction) {
+      logger.info('Production protection: Skipping production deployments');
+    }
+
+    const deploymentsToDelete = sortedDeployments.filter((deployment, index) => {
+      if (keepLatest > 0 && index < keepLatest) {
+        skippedCount++;
+        logger.debug(
+          `Skipping latest deployment #${index + 1}: ${deployment.id} (${deployment.environment}) - ${deployment.created_on}`
+        );
+        return false;
+      }
+
+      if (skipProduction && deployment.environment === 'production') {
+        skippedCount++;
+        logger.debug(
+          `Skipping production deployment: ${deployment.id} (environment: ${deployment.environment})`
+        );
+        return false;
+      }
+
+      return true;
+    });
 
     if (skippedCount > 0) {
       logger.warn(`⚠️  Production protection: ${skippedCount} deployments will be skipped`);
+      const tips = [];
+
+      if (skipProduction) {
+        tips.push('use --skip-production false to include production deployments');
+      }
+
       if (keepLatest > 0) {
-        logger.info(
-          '💡 To delete production deployments, use --no-skip-production or set --keep-latest=0'
-        );
+        tips.push('use --keep-latest 0 to include latest deployments');
+      }
+
+      if (tips.length > 0) {
+        logger.info(`💡 To include protected deployments, ${tips.join('; ')}`);
       }
     }
 

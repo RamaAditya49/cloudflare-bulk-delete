@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables without printing dotenv runtime tips in CLI output.
+dotenv.config({ quiet: true });
 
 /**
  * Application configuration for Cloudflare Bulk Delete

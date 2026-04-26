@@ -68,11 +68,15 @@ describe('CloudflareClient', () => {
     });
 
     test('should throw error if token is missing', () => {
-      expect(() => new CloudflareClient(null, mockAccountId)).toThrow('API Token and Account ID are required for Cloudflare Client');
+      expect(() => new CloudflareClient(null, mockAccountId)).toThrow(
+        'API Token and Account ID are required for Cloudflare Client'
+      );
     });
 
     test('should throw error if account ID is missing', () => {
-      expect(() => new CloudflareClient(mockToken, null)).toThrow('API Token and Account ID are required for Cloudflare Client');
+      expect(() => new CloudflareClient(mockToken, null)).toThrow(
+        'API Token and Account ID are required for Cloudflare Client'
+      );
     });
   });
 

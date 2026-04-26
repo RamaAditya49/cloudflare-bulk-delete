@@ -166,7 +166,7 @@ export class CloudflareClient {
             method: 'general'
           };
         } else {
-          throw new Error('General token validation failed');
+          throw new Error('General token validation failed', { cause: response });
         }
       } catch (generalError) {
         logger.error('Connection validation failed on both endpoints:', {
