@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-26
+
 ### Added
 
 - VS Code extension package under `vscode/` with commands for credential setup, resource listing, Pages cleanup preview, and confirmed deletion.

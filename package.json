@@ -1,11 +1,11 @@
 {
   "name": "cloudflare-bulk-delete",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Fix Cloudflare 'too many deployments to be deleted' error. Bulk delete Pages and Workers deployments safely.",
   "main": "src/index.js",
   "type": "module",
   "bin": {
-    "cf-bulk-delete": "./bin/cli.js"
+    "cf-bulk-delete": "bin/cli.js"
   },
   "scripts": {
     "start": "node src/index.js",
@@ -43,7 +43,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RamaAditya49/cloudflare-bulk-delete.git"
+    "url": "git+https://github.com/RamaAditya49/cloudflare-bulk-delete.git"
   },
   "bugs": {
     "url": "https://github.com/RamaAditya49/cloudflare-bulk-delete/issues"
