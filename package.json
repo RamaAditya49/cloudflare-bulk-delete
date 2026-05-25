@@ -53,8 +53,7 @@
     "node": ">=22.14.0"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "dependencies": {
     "axios": "^1.16.1",
