@@ -1,3 +1,31 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- VS Code extension package under `vscode/` with commands for credential setup, resource listing, Pages cleanup preview, and confirmed deletion.
+- Regression tests for manual publish policy and VS Code cleanup planning.
+
+### Changed
+
+- npm and VS Code Marketplace publishing are now documented as manual-only release steps.
+- Updated production dependencies and regenerated npm, pnpm, and Bun lockfiles.
+
+### Removed
+
+- Automated release workflow and semantic-release configuration/dependencies.
+- Dependabot, Husky, commitlint, and npm lifecycle publish guards.
+
+### Fixed
+
+- Preserved the supported CLI guidance for protected Pages deployments: `--skip-production false` and `--keep-latest 0`.
+
 # [1.2.0](https://github.com/RamaAditya49/cloudflare-bulk-delete/compare/v1.1.1...v1.2.0) (2025-11-24)
 
 ### Features
@@ -25,27 +53,3 @@
 ### Features
 
 - add force parameter and automated release workflow ([5d077b1](https://github.com/RamaAditya49/cloudflare-bulk-delete/commit/5d077b1ed661f096a98df68dbd5a588901c5622e))
-
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-### Added
-
-- Force parameter support for aliased deployment deletion
-- Comprehensive README token setup tutorial
-- Automated release workflow with semantic-release
-
-### Changed
-
-- Enhanced documentation with detailed troubleshooting section
-- Improved test coverage for force parameter functionality
-
-### Fixed
-
-- Aliased deployment deletion error with `force=true` parameter

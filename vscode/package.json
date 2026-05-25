@@ -1,0 +1,101 @@
+{
+  "name": "cloudflare-bulk-delete-vscode",
+  "displayName": "Cloudflare Bulk Delete",
+  "description": "Manage Cloudflare Pages deployment cleanup from VS Code.",
+  "version": "1.2.0",
+  "publisher": "ramaaditya49",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RamaAditya49/cloudflare-bulk-delete.git",
+    "directory": "vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/RamaAditya49/cloudflare-bulk-delete/issues"
+  },
+  "homepage": "https://github.com/RamaAditya49/cloudflare-bulk-delete#readme",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "cloudflare",
+    "pages",
+    "workers",
+    "deployments",
+    "cleanup"
+  ],
+  "main": "./src/extension.cjs",
+  "extensionKind": [
+    "workspace",
+    "ui"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "activationEvents": [
+    "onCommand:cloudflareBulkDelete.configure",
+    "onCommand:cloudflareBulkDelete.listResources",
+    "onCommand:cloudflareBulkDelete.previewPagesCleanup",
+    "onCommand:cloudflareBulkDelete.deletePagesDeployments"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "cloudflareBulkDelete.configure",
+        "title": "Cloudflare Bulk Delete: Configure Credentials",
+        "category": "Cloudflare Bulk Delete"
+      },
+      {
+        "command": "cloudflareBulkDelete.listResources",
+        "title": "Cloudflare Bulk Delete: List Resources",
+        "category": "Cloudflare Bulk Delete"
+      },
+      {
+        "command": "cloudflareBulkDelete.previewPagesCleanup",
+        "title": "Cloudflare Bulk Delete: Preview Pages Cleanup",
+        "category": "Cloudflare Bulk Delete"
+      },
+      {
+        "command": "cloudflareBulkDelete.deletePagesDeployments",
+        "title": "Cloudflare Bulk Delete: Delete Pages Deployments",
+        "category": "Cloudflare Bulk Delete"
+      }
+    ],
+    "configuration": {
+      "title": "Cloudflare Bulk Delete",
+      "properties": {
+        "cloudflareBulkDelete.accountId": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Cloudflare Account ID. Tokens are stored separately in VS Code Secret Storage."
+        },
+        "cloudflareBulkDelete.defaultKeepLatest": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0,
+          "markdownDescription": "Default number of latest Pages deployments to keep protected."
+        },
+        "cloudflareBulkDelete.defaultSkipProduction": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Skip production Pages deployments by default."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "check": "node scripts/check-manifest.mjs && node --check src/extension.cjs && node -e \"import('./src/cloudflare.js')\"",
+    "package": "npm run check && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.94.0",
+    "@vscode/vsce": "^3.6.6"
+  }
+}

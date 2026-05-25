@@ -77,16 +77,15 @@ npm run dev                 # Run in development mode
 npm run test               # Run all tests
 npm run test:watch         # Run tests in watch mode
 npm run test:coverage      # Run tests with coverage report
-npm run test:ci            # Run tests for CI (no watch, coverage)
 
 # Code Quality
 npm run lint               # Run ESLint
 npm run lint:fix           # Fix ESLint issues automatically
 npm run format             # Format code with Prettier
 
-# Build and Release
+# Build and Packaging
 npm run build              # Build the project
-npm run prepublish         # Prepare for npm publish
+npm run vscode:package     # Build a local VS Code VSIX
 
 # Examples
 npm run example:basic      # Run basic cleanup example
@@ -119,7 +118,7 @@ cloudflare-bulk-delete/
 │   ├── programmatic/   # Library usage examples
 │   └── configuration/ # Config templates
 ├── docs/               # Additional documentation
-└── .github/            # GitHub workflows and templates
+└── .github/            # GitHub issue templates and repository metadata
 ```
 
 ## Coding Standards
@@ -332,10 +331,9 @@ When submitting a PR, include:
 
 ### Review Process
 
-1. **Automated Checks**: All PRs must pass CI/CD checks
-2. **Code Review**: At least one maintainer review required
-3. **Testing**: Verify tests pass and coverage is maintained
-4. **Documentation**: Ensure changes are properly documented
+1. **Code Review**: At least one maintainer review required
+2. **Testing**: Verify tests pass locally and coverage is maintained
+3. **Documentation**: Ensure changes are properly documented
 
 ### Merging
 
@@ -347,7 +345,7 @@ When submitting a PR, include:
 
 ### Conventional Commits
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation. All commits must follow this format:
+This project prefers clear Conventional Commit-style messages, but there is no commit hook or automated validator.
 
 ```
 <type>(<scope>): <subject>
@@ -359,15 +357,14 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 
 ### Commit Types
 
-- **feat**: New feature (triggers MINOR version bump)
-- **fix**: Bug fix (triggers PATCH version bump)
+- **feat**: New feature
+- **fix**: Bug fix
 - **docs**: Documentation changes only
 - **style**: Code style changes (formatting, missing semicolons, etc.)
 - **refactor**: Code refactoring without feature changes
 - **perf**: Performance improvements
 - **test**: Adding or updating tests
 - **chore**: Maintenance tasks, dependency updates
-- **ci**: CI/CD configuration changes
 - **build**: Build system changes
 - **revert**: Reverting a previous commit
 
@@ -381,21 +378,21 @@ feat!: remove support for Node 14
 BREAKING CHANGE: Node 14 is no longer supported. Minimum version is now Node 16.
 ```
 
-This triggers a MAJOR version bump.
+Use a MAJOR version bump when releasing breaking changes.
 
 ### Commit Examples
 
 ```bash
-# Feature addition (1.0.0 → 1.1.0)
+# Feature addition
 feat: add force parameter for aliased deployments
 
-# Bug fix (1.0.0 → 1.0.1)
+# Bug fix
 fix: resolve token validation error
 
-# Documentation update (no version bump)
+# Documentation update
 docs: update README with detailed setup guide
 
-# Breaking change (1.0.0 → 2.0.0)
+# Breaking change
 feat!: change API response format
 
 BREAKING CHANGE: API now returns { data, meta } instead of flat response
@@ -405,45 +402,16 @@ feat(pages): add deployment filtering by environment
 fix(cli): correct help text for --force flag
 ```
 
-### Commit Message Template
+### Releases
 
-A commit message template is configured automatically. When you commit, you'll see:
+Publishing is manual. GitHub Actions workflows are intentionally not used in this repository.
 
-```bash
-git commit
-# Opens editor with template:
-# <type>(<scope>): <subject>
-# |<----  Using a Maximum Of 50 Characters  ---->|
-# ...
-```
+Before a release:
 
-### Automated Releases
-
-When you push to `main`:
-
-1. **semantic-release** analyzes commit messages
-2. **Version** is automatically bumped based on commit types
-3. **CHANGELOG.md** is updated automatically
-4. **GitHub release** is created with release notes
-5. **npm package** is published automatically
-
-**No manual version bumping required!**
-
-### Commit Validation
-
-Commits are validated using commitlint:
-
-```bash
-# ✅ Valid commits
-git commit -m "feat: add new feature"
-git commit -m "fix: resolve bug"
-git commit -m "docs: update README"
-
-# ❌ Invalid commits (will be rejected)
-git commit -m "Added new feature"  # Missing type
-git commit -m "FIX: bug"           # Type must be lowercase
-git commit -m "feat: Fix."         # Subject ends with period
-```
+1. Update `package.json`, `package-lock.json`, and `CHANGELOG.md`.
+2. Run `npm test`, `npm run lint`, and `npm audit`.
+3. For the VS Code extension, run `npm run vscode:package`.
+4. Publish npm and VS Code Marketplace packages from a local authenticated machine.
 
 ## Issue Reporting
 
@@ -536,22 +504,23 @@ Keep the main README.md current with:
 
 ## Release Process
 
-### Automated Releases with semantic-release
+### Manual Release Flow
 
-This project uses **semantic-release** for fully automated releases. You don't need to manually bump versions or create releases.
+This project intentionally does not use repository automation for release. Maintainers release from a local authenticated machine after validation.
 
-### How It Works
+Recommended flow:
 
-1. **Commit with Conventional Format**: Use conventional commit messages
-2. **Push to Main**: Merge your PR to main branch
-3. **Automatic Release**: semantic-release handles everything:
-   - Analyzes commits since last release
-   - Determines next version number
-   - Updates `package.json` and `package-lock.json`
-   - Generates/updates `CHANGELOG.md`
-   - Creates GitHub release with notes
-   - Publishes to npm
-   - Creates git tag
+```bash
+npm ci
+npm test
+npm run lint
+npm audit
+npm pack --dry-run
+npm publish
+
+npm run vscode:package
+# Then publish the generated VSIX manually from vscode/ with your Marketplace publisher account.
+```
 
 ### Version Numbering
 
@@ -560,15 +529,6 @@ We follow [Semantic Versioning](https://semver.org/):
 - **MAJOR** (1.0.0 → 2.0.0): Breaking changes (`feat!:` or `BREAKING CHANGE:`)
 - **MINOR** (1.0.0 → 1.1.0): New features (`feat:`)
 - **PATCH** (1.0.0 → 1.0.1): Bug fixes (`fix:`)
-
-### Manual Release (Emergency Only)
-
-If automated release fails, maintainers can manually release:
-
-```bash
-# Run semantic-release locally
-npx semantic-release --no-ci
-```
 
 ### Release Checklist
 

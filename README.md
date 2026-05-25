@@ -7,8 +7,6 @@ When Cloudflare shows "Your project has too many deployments to be deleted, foll
 [![NPM Version](https://img.shields.io/npm/v/cloudflare-bulk-delete?style=flat-square&logo=npm&color=red)](https://www.npmjs.com/package/cloudflare-bulk-delete)
 [![NPM Downloads](https://img.shields.io/npm/dm/cloudflare-bulk-delete?style=flat-square&logo=npm&color=orange)](https://www.npmjs.com/package/cloudflare-bulk-delete)
 [![GitHub Release](https://img.shields.io/github/v/release/RamaAditya49/cloudflare-bulk-delete?style=flat-square&logo=github&color=blue)](https://github.com/RamaAditya49/cloudflare-bulk-delete/releases)
-[![CI Status](https://img.shields.io/github/actions/workflow/status/RamaAditya49/cloudflare-bulk-delete/ci.yml?style=flat-square&logo=github-actions&label=CI)](https://github.com/RamaAditya49/cloudflare-bulk-delete/actions/workflows/ci.yml)
-[![Release Status](https://img.shields.io/github/actions/workflow/status/RamaAditya49/cloudflare-bulk-delete/release.yml?style=flat-square&logo=github-actions&label=Release)](https://github.com/RamaAditya49/cloudflare-bulk-delete/actions/workflows/release.yml)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D22.14.0-green.svg?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/RamaAditya49/cloudflare-bulk-delete/blob/main/LICENSE)
 [![GitHub Issues](https://img.shields.io/github/issues/RamaAditya49/cloudflare-bulk-delete?style=flat-square&logo=github)](https://github.com/RamaAditya49/cloudflare-bulk-delete/issues)
@@ -88,7 +86,21 @@ pnpm add -g cloudflare-bulk-delete
 bun add -g cloudflare-bulk-delete
 ```
 
-Requires Node.js 22.14 or newer. The repository includes npm, pnpm, and Bun lockfiles, and CI verifies npm, pnpm, and Bun installs.
+Requires Node.js 22.14 or newer. The repository includes npm, pnpm, and Bun lockfiles for local verification.
+
+## VS Code Extension
+
+The VS Code extension package lives in [`vscode/`](vscode/). It has no `os` or `cpu` restriction, so one VSIX can be used across VS Code desktop and remote extension hosts that support Node-based extensions.
+
+```bash
+# Build a local VSIX from the repo root
+npm run vscode:package
+
+# Install locally for testing
+code --install-extension vscode/cloudflare-bulk-delete-vscode-*.vsix
+```
+
+Publishing is manual. There is no GitHub Actions workflow, Dependabot config, git hook, npm lifecycle publish guard, or release workflow in this repository.
 
 ## Setup
 

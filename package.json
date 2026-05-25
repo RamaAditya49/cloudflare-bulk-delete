@@ -13,16 +13,13 @@
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
-    "test:ci": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --ci --coverage --watchAll=false",
-    "test:publish": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --ci --coverage --watchAll=false",
     "lint": "eslint src/ bin/",
     "lint:fix": "eslint src/ bin/ --fix",
-    "format": "prettier --write \"**/*.{js,json,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{js,json,md,yml,yaml}\"",
+    "format": "prettier --write \"**/*.{js,cjs,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,cjs,json,md,yml,yaml}\"",
     "build": "echo 'No build step required for Node.js project'",
-    "prepare": "husky",
-    "semantic-release": "semantic-release",
-    "prepublishOnly": "npm run test:publish && npm run lint"
+    "vscode:check": "npm --prefix vscode ci && npm --prefix vscode run check",
+    "vscode:package": "npm --prefix vscode ci && npm --prefix vscode run package"
   },
   "keywords": [
     "cloudflare",
@@ -36,7 +33,6 @@
     "deployments",
     "deployment cleanup",
     "cli",
-    "automation",
     "cleanup",
     "tool"
   ],
@@ -61,35 +57,25 @@
     "provenance": true
   },
   "dependencies": {
-    "axios": "^1.15.2",
+    "axios": "^1.16.1",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "dayjs": "^1.11.20",
     "dotenv": "^17.4.2",
-    "inquirer": "^13.4.2",
+    "inquirer": "^13.4.3",
     "ora": "^9.4.0",
     "p-limit": "^7.3.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.2",
-    "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^10.0.1",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/commit-analyzer": "^13.0.1",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.6",
-    "@semantic-release/npm": "^13.1.5",
-    "@semantic-release/release-notes-generator": "^14.1.0",
     "@types/jest": "^30.0.0",
     "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
-    "husky": "^9.1.7",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
-    "prettier": "^3.8.3",
-    "semantic-release": "^25.0.3"
+    "prettier": "^3.8.3"
   },
   "overrides": {
     "follow-redirects": "1.16.0",
