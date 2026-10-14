@@ -1,6 +1,37 @@
 import { CloudflareClient } from './cloudflare-client.js';
+import { isUndeletableDeploymentError } from './deployment-errors.js';
 import { logger, ProgressLogger } from '../utils/logger.js';
 import dayjs from 'dayjs';
+
+const WORKER_VERSION_DELETE_LIMIT =
+  'Cloudflare does not let an API token delete Worker versions. This tool deletes historical deployments only, and the deployment serving traffic stays in place.';
+
+function normalizeWorkerDeployments(result) {
+  if (Array.isArray(result)) {
+    return result.map(mapWorkerDeployment);
+  }
+
+  if (result && Array.isArray(result.deployments)) {
+    return result.deployments.map(mapWorkerDeployment);
+  }
+
+  throw new Error(
+    `Cloudflare returned Worker records that are not deployments. ${WORKER_VERSION_DELETE_LIMIT}`
+  );
+}
+
+function mapWorkerDeployment(deployment) {
+  const versionId = deployment.versions?.[0]?.version_id;
+
+  return {
+    ...deployment,
+    id: deployment.id,
+    created_on: deployment.created_on,
+    version: versionId || deployment.version || deployment.number || 'unknown',
+    environment: deployment.environment || 'production',
+    recordType: 'deployment'
+  };
+}
 
 /**
  * Cloudflare Workers Client
@@ -52,8 +83,9 @@ export class WorkersClient extends CloudflareClient {
   }
 
   /**
-   * List deployments for specific Worker script
-   * Note: Workers uses different concept - each deployment is a script version
+   * List deployments for a Worker script.
+   * The first deployment returned by Cloudflare is the one serving traffic.
+   * Script versions are a separate record and cannot be deleted with an API token.
    */
   async listDeployments(scriptName, options = {}) {
     try {
@@ -66,77 +98,34 @@ export class WorkersClient extends CloudflareClient {
         per_page: perPage
       };
 
-      // Workers API uses a different endpoint for deployment history
       const response = await this.get(
         `/accounts/${this.accountId}/workers/scripts/${scriptName}/deployments`,
         params
       );
 
-      if (response.success) {
-        return {
-          deployments: response.result,
-          pagination: response.result_info || {}
-        };
-      } else {
+      if (!response.success) {
         throw new Error(`Failed to fetch deployments for ${scriptName}`);
       }
-    } catch (error) {
-      // If deployments endpoint is not available, try script versions
-      logger.debug(`Deployment endpoint not available, trying script versions: ${error.message}`);
-      return await this.listScriptVersions(scriptName, options);
-    }
-  }
 
-  /**
-   * List script versions as alternative to deployments
-   */
-  async listScriptVersions(scriptName, options = {}) {
-    try {
-      const { page = 1, perPage = 25 } = options;
-
-      logger.info(`Fetching versions for Worker ${scriptName}...`);
-
-      const params = {
-        page,
-        per_page: perPage
+      return {
+        deployments: normalizeWorkerDeployments(response.result),
+        pagination: response.result_info || {}
       };
-
-      const response = await this.get(
-        `/accounts/${this.accountId}/workers/scripts/${scriptName}/versions`,
-        params
-      );
-
-      if (response.success) {
-        const versions = Array.isArray(response.result)
-          ? response.result
-          : response.result?.items || [];
-
-        // Transform versions to look like deployments for consistency
-        const transformedVersions = versions.map(version => ({
-          id: version.id,
-          created_on: version.created_on,
-          modified_on: version.modified_on,
-          version: version.number,
-          metadata: version.metadata,
-          environment: 'production', // Workers usually production
-          status: 'active' // Assume active if exists
-        }));
-
-        return {
-          deployments: transformedVersions,
-          pagination: response.result_info || {}
-        };
-      } else {
-        throw new Error(`Failed to fetch versions for ${scriptName}`);
-      }
     } catch (error) {
-      logger.error(`Failed to fetch versions for ${scriptName}:`, error.message);
-      throw error;
+      if (
+        error.status ||
+        error.message?.includes('Worker versions') ||
+        error.message?.includes('not deployments')
+      ) {
+        throw error;
+      }
+
+      throw new Error(`${error.message}. ${WORKER_VERSION_DELETE_LIMIT}`);
     }
   }
 
   /**
-   * List ALL deployments/versions for specific Worker script
+   * List every Worker deployment. Versions are not included because they cannot be deleted.
    */
   async listAllDeployments(scriptName, options = {}) {
     try {
@@ -156,9 +145,12 @@ export class WorkersClient extends CloudflareClient {
         });
 
         const deployments = result.deployments;
+        const pagination = result.pagination || {};
         allDeployments = allDeployments.concat(deployments);
 
-        hasMore = deployments.length === perPage;
+        hasMore = pagination.total_pages
+          ? page < pagination.total_pages
+          : deployments.length === perPage;
         page++;
 
         if (page > 50) {
@@ -297,6 +289,15 @@ export class WorkersClient extends CloudflareClient {
         successCount++;
         progressLogger.increment(deployment.id);
       } catch (error) {
+        if (isUndeletableDeploymentError(error)) {
+          skippedCount++;
+          logger.warn(
+            `Skipped protected Worker deployment ${deployment.id}: ${error.message}. The deployment serving traffic cannot be deleted.`
+          );
+          progressLogger.increment(deployment.id);
+          continue;
+        }
+
         failedCount++;
         progressLogger.increment(deployment.id, error);
       }

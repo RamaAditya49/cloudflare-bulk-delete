@@ -210,7 +210,7 @@ cf-bulk-delete token-template                # Show API token template link
 --skip-production      # Skip production (default: true, use "false" to include production)
 --keep-latest <n>      # Keep newest N Pages deployments protected (default: 1)
 --batch-size <n>       # Process in batches (default: 10)
---force                # Force delete aliased deployments (default: true)
+--force                # Force delete aliased non-production deployments (default: true)
 --no-force             # Disable force mode for aliased deployments
 ```
 
@@ -273,9 +273,17 @@ console.log(`Deleted: ${result.success}, Failed: ${result.failed}`);
 Error: You cannot delete an aliased deployment without a `?force=true` parameter
 ```
 
-- **Solution**: This is automatically handled! The tool uses `force=true` by default
-- If you want to preserve aliased deployments, use `--no-force` flag
-- Aliased deployments are special deployments linked to custom domains or branch aliases
+- **Solution**: This is automatically handled for aliased non-production deployments. The tool sends `force=true` by default
+- `force=true` does not delete the active production deployment, and it does not delete the latest deployment of a branch
+- If you want to preserve aliased deployments, use `--no-force`
+
+**"Your project has too many deployments to be deleted"**
+
+Cloudflare still documents this Pages known issue when a project has a high number of deployments (over 100). The dashboard cannot delete the project until individual deployments are removed. Delete the old deployments with this tool, then delete the project. The active production deployment and the latest deployment of each branch stay in place.
+
+**Worker versions cannot be pruned**
+
+A Worker version is the uploaded code snapshot. A deployment only chooses which version receives traffic. As of 2026, the deployments API can delete historical deployments, but an API token cannot delete individual versions (`DELETE` on the versions endpoint is rejected). `cf-bulk-delete delete workers` removes historical deployments and keeps the deployment that is serving traffic. Version history remains until Cloudflare provides a supported delete API. The rollback window is the latest 100 versions.
 
 **"Too Many Requests"**
 

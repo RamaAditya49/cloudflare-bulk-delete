@@ -1,4 +1,6 @@
 import { CloudflareClient } from './cloudflare-client.js';
+import { isUndeletableDeploymentError } from './deployment-errors.js';
+import { latestDeploymentIdsByBranch } from './pages-protection.js';
 import { logger, ProgressLogger } from '../utils/logger.js';
 import dayjs from 'dayjs';
 
@@ -257,6 +259,9 @@ export class PagesClient extends CloudflareClient {
       logger.info('Production protection: Skipping production deployments');
     }
 
+    const branchLatestIds = latestDeploymentIdsByBranch(sortedDeployments);
+    let branchProtectedCount = 0;
+
     const deploymentsToDelete = sortedDeployments.filter((deployment, index) => {
       if (keepLatest > 0 && index < keepLatest) {
         skippedCount++;
@@ -274,8 +279,23 @@ export class PagesClient extends CloudflareClient {
         return false;
       }
 
+      if (branchLatestIds.has(deployment.id)) {
+        skippedCount++;
+        branchProtectedCount++;
+        logger.debug(
+          `Skipping latest deployment for its branch: ${deployment.id} (${deployment.environment}) - ${deployment.created_on}`
+        );
+        return false;
+      }
+
       return true;
     });
+
+    if (branchProtectedCount > 0) {
+      logger.info(
+        `Branch protection: ${branchProtectedCount} latest branch deployment(s) cannot be deleted`
+      );
+    }
 
     if (skippedCount > 0) {
       logger.warn(`⚠️  Production protection: ${skippedCount} deployments will be skipped`);
@@ -326,6 +346,15 @@ export class PagesClient extends CloudflareClient {
         successCount++;
         progressLogger.increment(deployment.id);
       } catch (error) {
+        if (isUndeletableDeploymentError(error)) {
+          skippedCount++;
+          logger.warn(
+            `Skipped protected deployment ${deployment.id}: ${error.message}. The active production deployment and the latest deployment of each branch cannot be deleted.`
+          );
+          progressLogger.increment(deployment.id);
+          continue;
+        }
+
         failedCount++;
         progressLogger.increment(deployment.id, error);
       }

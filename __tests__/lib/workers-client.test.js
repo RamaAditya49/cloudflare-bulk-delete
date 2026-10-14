@@ -124,35 +124,47 @@ describe('WorkersClient', () => {
   });
 
   describe('listAllDeployments', () => {
-    test('should fetch all deployments for script', async () => {
-      // Mock the first call to deployments endpoint (will fail)
-      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Deployments endpoint not available'));
-
-      // Mock the fallback call to versions endpoint
+    test('should read the current deployments envelope', async () => {
       const mockResponse = {
         data: {
           success: true,
-          result: [
-            { id: 'version1', number: '1', created_on: '2023-01-01T00:00:00Z' },
-            { id: 'version2', number: '2', created_on: '2023-01-02T00:00:00Z' }
-          ]
+          result: {
+            deployments: [
+              {
+                id: 'deployment-live',
+                created_on: '2023-01-02T00:00:00Z',
+                versions: [{ version_id: 'version-live', percentage: 100 }]
+              },
+              {
+                id: 'deployment-old',
+                created_on: '2023-01-01T00:00:00Z',
+                versions: [{ version_id: 'version-old', percentage: 0 }]
+              }
+            ]
+          },
+          result_info: { page: 1, total_pages: 1 }
         }
       };
       mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
       const result = await workersClient.listAllDeployments('test-script');
 
-      expect(result.length).toBe(2);
-      expect(result[0].version).toBe('1');
-      // Should call deployments first, then versions
+      expect(result.map(deployment => deployment.id)).toEqual([
+        'deployment-live',
+        'deployment-old'
+      ]);
+      expect(result[0].version).toBe('version-live');
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         `/accounts/${mockAccountId}/workers/scripts/test-script/deployments`,
         { params: { page: 1, per_page: 100 } }
       );
+      expect(mockAxiosInstance.get).not.toHaveBeenCalledWith(
+        `/accounts/${mockAccountId}/workers/scripts/test-script/versions`,
+        expect.anything()
+      );
     });
 
-    test('should handle Workers versions responses with items array', async () => {
-      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Deployments endpoint not available'));
+    test('should refuse to treat Worker versions as deletable deployments', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({
         data: {
           success: true,
@@ -162,14 +174,9 @@ describe('WorkersClient', () => {
         }
       });
 
-      const result = await workersClient.listAllDeployments('test-script');
-
-      expect(result).toEqual([
-        expect.objectContaining({
-          id: 'version1',
-          version: '1'
-        })
-      ]);
+      await expect(workersClient.listAllDeployments('test-script')).rejects.toThrow(
+        /Script versions cannot be deleted|Worker versions/
+      );
     });
   });
 

@@ -1,6 +1,52 @@
 const DEFAULT_BASE_URL = 'https://api.cloudflare.com/client/v4';
 const PAGE_SIZE = 100;
 
+function pagesBranchKey(deployment) {
+  const metadata = deployment?.deployment_trigger?.metadata ?? {};
+  const branch = metadata.branch || metadata.branch_name || deployment?.branch;
+
+  if (typeof branch === 'string' && branch.trim()) {
+    return branch.trim();
+  }
+
+  if (deployment?.environment === 'production') {
+    return 'production';
+  }
+
+  return null;
+}
+
+function latestDeploymentIdsByBranch(deployments) {
+  const newestFirst = [...deployments].sort(
+    (left, right) => new Date(right.created_on) - new Date(left.created_on)
+  );
+  const seenBranches = new Set();
+  const protectedIds = new Set();
+
+  for (const deployment of newestFirst) {
+    const branch = pagesBranchKey(deployment);
+    if (!branch || seenBranches.has(branch) || !deployment?.id) {
+      continue;
+    }
+
+    seenBranches.add(branch);
+    protectedIds.add(deployment.id);
+  }
+
+  return protectedIds;
+}
+
+export function isUndeletableDeploymentError(error) {
+  const text = String(error?.message || '').toLowerCase();
+
+  return (
+    text.includes('active production deployment') ||
+    text.includes('latest deployment') ||
+    text.includes('cannot be deleted') ||
+    text.includes('aliased deployment')
+  );
+}
+
 export function planPagesDeletion(deployments, options = {}) {
   const { keepLatest = 1, skipProduction = true, maxAgeDays, now = new Date() } = options;
 
@@ -26,6 +72,7 @@ export function planPagesDeletion(deployments, options = {}) {
   }
 
   const toDelete = [];
+  const branchLatestIds = latestDeploymentIdsByBranch(sortedDeployments);
 
   ageEligible.forEach((deployment, index) => {
     if (keepLatest > 0 && index < keepLatest) {
@@ -35,6 +82,11 @@ export function planPagesDeletion(deployments, options = {}) {
 
     if (skipProduction && deployment.environment === 'production') {
       skipped.push({ ...deployment, reason: 'production-protected' });
+      return;
+    }
+
+    if (branchLatestIds.has(deployment.id)) {
+      skipped.push({ ...deployment, reason: 'branch-latest-protected' });
       return;
     }
 

@@ -1,7 +1,14 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import axios from 'axios';
 import pLimit from 'p-limit';
 import { config } from '../config/config.js';
 import { logger } from '../utils/logger.js';
+
+const packageVersion = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../package.json'), 'utf8')
+).version;
 
 /**
  * Base Cloudflare API Client
@@ -26,7 +33,7 @@ export class CloudflareClient {
       headers: {
         Authorization: `Bearer ${this.apiToken}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'cloudflare-bulk-delete/1.0.0'
+        'User-Agent': `cloudflare-bulk-delete/${packageVersion}`
       },
       timeout: config.cli.timeout
     });
@@ -52,27 +59,35 @@ export class CloudflareClient {
 
     logger.error('Cloudflare API Error:', errorInfo);
 
-    // Custom error messages based on status code
-    let message = 'An error occurred while accessing Cloudflare API';
+    const apiMessages = error.response?.data?.errors
+      ?.map(item => item?.message)
+      .filter(Boolean);
 
-    switch (error.response?.status) {
-      case 401:
-        message = 'API Token is invalid or lacks permissions';
-        break;
-      case 403:
-        message = 'Access denied. Check API Token permissions';
-        break;
-      case 404:
-        message = 'Resource not found';
-        break;
-      case 429:
-        message = 'Rate limit exceeded. Waiting before retry...';
-        break;
-      case 500:
-      case 502:
-      case 503:
-        message = 'Server error from Cloudflare. Try again later';
-        break;
+    // Prefer Cloudflare's own message so protected-deployment errors stay classifiable.
+    let message = apiMessages?.length
+      ? apiMessages.join('; ')
+      : 'An error occurred while accessing Cloudflare API';
+
+    if (!apiMessages?.length) {
+      switch (error.response?.status) {
+        case 401:
+          message = 'API Token is invalid or lacks permissions';
+          break;
+        case 403:
+          message = 'Access denied. Check API Token permissions';
+          break;
+        case 404:
+          message = 'Resource not found';
+          break;
+        case 429:
+          message = 'Rate limit exceeded. Waiting before retry...';
+          break;
+        case 500:
+        case 502:
+        case 503:
+          message = 'Server error from Cloudflare. Try again later';
+          break;
+      }
     }
 
     const customError = new Error(message);

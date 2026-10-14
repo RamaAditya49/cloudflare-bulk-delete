@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-14
+
+### Fixed
+
+- Pages cleanup now keeps the latest deployment of each branch. Cloudflare still rejects that delete, including with `force=true`.
+- A rejection for the active production deployment, the latest branch deployment, or an aliased deployment is counted as skipped.
+- Workers cleanup reads the current deployments list (`result.deployments`) and no longer treats script versions as deletable deployments. An API token still cannot delete Worker versions.
+- Cloudflare API error text is preserved so those protected deletes can be recognized.
+- `cf-bulk-delete --version` reports the package version.
+
 ## [1.3.0] - 2026-05-26
 
 ### Added

@@ -193,32 +193,33 @@ describe('Integration Tests - Complete Workflows', () => {
         }
       });
 
-      // Mock list deployments (first call fails, second succeeds with versions)
-      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Deployments endpoint not available'));
       mockAxiosInstance.get.mockResolvedValueOnce({
         data: {
           success: true,
-          result: [
-            {
-              id: 'version-1',
-              number: '1',
-              created_on: '2024-01-01T00:00:00Z'
-            },
-            {
-              id: 'version-2',
-              number: '2',
-              created_on: '2024-01-02T00:00:00Z'
-            },
-            {
-              id: 'version-3',
-              number: '3',
-              created_on: '2024-01-03T00:00:00Z'
-            }
-          ]
+          result: {
+            deployments: [
+              {
+                id: 'deployment-1',
+                created_on: '2024-01-03T00:00:00Z',
+                versions: [{ version_id: 'version-3', percentage: 100 }]
+              },
+              {
+                id: 'deployment-2',
+                created_on: '2024-01-02T00:00:00Z',
+                versions: [{ version_id: 'version-2', percentage: 0 }]
+              },
+              {
+                id: 'deployment-3',
+                created_on: '2024-01-01T00:00:00Z',
+                versions: [{ version_id: 'version-1', percentage: 0 }]
+              }
+            ]
+          },
+          result_info: { page: 1, total_pages: 1 }
         }
       });
 
-      // Mock delete version responses
+      // Mock delete deployment responses
       mockAxiosInstance.delete.mockResolvedValue({
         data: { success: true }
       });
@@ -229,7 +230,7 @@ describe('Integration Tests - Complete Workflows', () => {
       const deployments = await serviceManager.listDeployments('workers', 'test-worker');
       expect(deployments).toHaveLength(3);
 
-      // Delete older versions with skipLatest=false to delete all
+      // Historical deployments can be deleted. Versions are not a delete target.
       const deleteResult = await serviceManager.bulkDeleteDeployments(
         'workers',
         'test-worker',

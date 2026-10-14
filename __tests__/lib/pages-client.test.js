@@ -321,6 +321,59 @@ describe('PagesClient', () => {
       );
     });
 
+    test('should keep the latest deployment of each branch', async () => {
+      const deployments = [
+        {
+          id: 'branch-latest',
+          environment: 'preview',
+          created_on: '2023-01-03T00:00:00Z',
+          deployment_trigger: { metadata: { branch: 'feature' } }
+        },
+        {
+          id: 'branch-old',
+          environment: 'preview',
+          created_on: '2023-01-01T00:00:00Z',
+          deployment_trigger: { metadata: { branch: 'feature' } }
+        }
+      ];
+
+      const result = await pagesClient.bulkDeleteDeployments('test-project', deployments, {
+        dryRun: true,
+        skipProduction: false,
+        keepLatest: 0
+      });
+
+      expect(result.skipped).toBe(1);
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        '[DRY RUN] 1. branch-old (preview) - 2023-01-01T00:00:00Z'
+      );
+      expect(mockLogger.info).not.toHaveBeenCalledWith(
+        expect.stringContaining('branch-latest (preview)')
+      );
+    });
+
+    test('should count a protected Cloudflare rejection as skipped', async () => {
+      const deployments = [
+        {
+          id: 'active-production',
+          environment: 'preview',
+          created_on: '2023-01-01T00:00:00Z'
+        }
+      ];
+      mockAxiosInstance.delete.mockRejectedValue(
+        new Error('You cannot delete the active production deployment')
+      );
+
+      const result = await pagesClient.bulkDeleteDeployments('test-project', deployments, {
+        skipProduction: false,
+        keepLatest: 0
+      });
+
+      expect(result.success).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(result.skipped).toBe(1);
+    });
+
     test('should protect both latest and production deployments by default', async () => {
       const deployments = [
         { id: 'latest-preview', environment: 'preview', created_on: '2023-01-03T00:00:00Z' },

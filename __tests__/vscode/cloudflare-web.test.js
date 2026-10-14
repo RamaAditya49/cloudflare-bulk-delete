@@ -40,4 +40,39 @@ describe('VS Code Cloudflare cleanup planner', () => {
       'latest-protected'
     ]);
   });
+
+  test('keeps the latest deployment of each branch even when global keepLatest is zero', () => {
+    const deployments = [
+      {
+        id: 'feature-old',
+        environment: 'preview',
+        created_on: '2026-01-01T00:00:00Z',
+        deployment_trigger: { metadata: { branch: 'feature' } }
+      },
+      {
+        id: 'feature-latest',
+        environment: 'preview',
+        created_on: '2026-01-03T00:00:00Z',
+        deployment_trigger: { metadata: { branch: 'feature' } }
+      },
+      {
+        id: 'main-old',
+        environment: 'preview',
+        created_on: '2026-01-02T00:00:00Z',
+        deployment_trigger: { metadata: { branch: 'main' } }
+      }
+    ];
+
+    const plan = planPagesDeletion(deployments, {
+      keepLatest: 0,
+      skipProduction: false
+    });
+
+    expect(plan.toDelete.map(deployment => deployment.id)).toEqual(['feature-old']);
+    expect(plan.skipped.map(deployment => deployment.id)).toEqual(['feature-latest', 'main-old']);
+    expect(plan.skipped.map(deployment => deployment.reason)).toEqual([
+      'branch-latest-protected',
+      'branch-latest-protected'
+    ]);
+  });
 });

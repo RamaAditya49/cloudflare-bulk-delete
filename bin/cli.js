@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -15,10 +18,14 @@ import dayjs from 'dayjs';
 
 // Package info
 const program = new Command();
+const packageInfo = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../package.json'), 'utf8')
+);
+
 program
   .name('cf-bulk-delete')
   .description('Tool for bulk deleting Cloudflare Pages and Workers deployments')
-  .version('1.0.0');
+  .version(packageInfo.version);
 
 function parseBooleanOption(value) {
   if (value === undefined || value === true) {

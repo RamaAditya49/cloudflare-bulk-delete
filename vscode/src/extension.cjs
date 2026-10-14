@@ -303,7 +303,8 @@ async function runPagesCleanup(context, commit) {
       return;
     }
 
-    const { formatDeploymentSummary, planPagesDeletion } = await loadCloudflareModule();
+    const { formatDeploymentSummary, isUndeletableDeploymentError, planPagesDeletion } =
+      await loadCloudflareModule();
     const deployments = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -337,6 +338,7 @@ async function runPagesCleanup(context, commit) {
     }
 
     const failures = [];
+    const protectedSkips = [];
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -354,11 +356,27 @@ async function runPagesCleanup(context, commit) {
           try {
             await api.deletePagesDeployment(selectedProject.project.name, deployment.id);
           } catch (error) {
-            failures.push({ deployment, error });
+            if (isUndeletableDeploymentError(error)) {
+              protectedSkips.push({ deployment, error });
+            } else {
+              failures.push({ deployment, error });
+            }
           }
         }
       }
     );
+
+    if (protectedSkips.length > 0) {
+      const channel = getOutputChannel();
+      channel.appendLine('');
+      channel.appendLine('Protected by Cloudflare and left in place:');
+      protectedSkips.forEach(({ deployment, error }) => {
+        channel.appendLine(`- ${deployment.id}: ${error.message}`);
+      });
+      channel.show(true);
+    }
+
+    const deletedCount = plan.toDelete.length - failures.length - protectedSkips.length;
 
     if (failures.length > 0) {
       const channel = getOutputChannel();
@@ -369,12 +387,16 @@ async function runPagesCleanup(context, commit) {
       });
       channel.show(true);
       vscode.window.showWarningMessage(
-        `Deleted ${plan.toDelete.length - failures.length}; ${failures.length} failed.`
+        `Deleted ${deletedCount}; ${protectedSkips.length} protected by Cloudflare; ${failures.length} failed.`
       );
       return;
     }
 
-    vscode.window.showInformationMessage(`Deleted ${plan.toDelete.length} deployment(s).`);
+    vscode.window.showInformationMessage(
+      protectedSkips.length > 0
+        ? `Deleted ${deletedCount} deployment(s). ${protectedSkips.length} stayed because Cloudflare will not delete them.`
+        : `Deleted ${plan.toDelete.length} deployment(s).`
+    );
   } catch (error) {
     vscode.window.showErrorMessage(`Cloudflare cleanup failed: ${error.message}`);
   }
