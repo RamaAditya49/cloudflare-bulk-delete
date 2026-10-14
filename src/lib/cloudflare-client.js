@@ -59,9 +59,7 @@ export class CloudflareClient {
 
     logger.error('Cloudflare API Error:', errorInfo);
 
-    const apiMessages = error.response?.data?.errors
-      ?.map(item => item?.message)
-      .filter(Boolean);
+    const apiMessages = error.response?.data?.errors?.map(item => item?.message).filter(Boolean);
 
     // Prefer Cloudflare's own message so protected-deployment errors stay classifiable.
     let message = apiMessages?.length
